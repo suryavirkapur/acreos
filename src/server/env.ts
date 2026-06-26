@@ -36,6 +36,7 @@ const envSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(1).default('dev-acreos-secret-change-me'),
   BETTER_AUTH_URL: z.string().default('http://localhost:3000'),
   RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
 
