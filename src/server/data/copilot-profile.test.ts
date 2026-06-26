@@ -1,15 +1,28 @@
 import assert from 'node:assert/strict';
 
 import { matchBestForProfile } from '@/server/data/best-match';
+import { matchMandateToParcels } from '@/server/data/matching';
 import {
+  extractMandateFromQuestion,
   extractProfileFromQuestion,
   formatBestMatchReply,
+  formatMandateReply,
+  formatPriceMomentumReply,
+  isCapitalSupplyQuestion,
+  isMandateDeploymentQuestion,
+  isPriceMomentumQuestion,
   isPropertyRecommendationQuestion,
+  isServiceDemandQuestion,
+  isVacantParcelsQuestion,
   parseBudgetAed,
 } from '@/server/data/copilot-profile';
+import { priceTrendByDistrict } from '@/server/data/queries';
 
 const SAMPLE_QUESTION =
   'I work in ADGM and have a budget of AED 2M. I want a 2 bedroom apartment near restaurants with good rental yield. Which districts should I consider?';
+
+const MANDATE_QUESTION =
+  'Where should a balanced fund with AED 200M-600M deploy capital this quarter?';
 
 function testRecommendationDetection() {
   assert.equal(isPropertyRecommendationQuestion(SAMPLE_QUESTION), true);
@@ -69,12 +82,64 @@ function testFormattedReply() {
   }
 }
 
+function testMandateDetection() {
+  assert.equal(isMandateDeploymentQuestion(MANDATE_QUESTION), true);
+  assert.equal(isMandateDeploymentQuestion(SAMPLE_QUESTION), false);
+}
+
+function testMandateExtraction() {
+  const { mandate, limit } = extractMandateFromQuestion(MANDATE_QUESTION);
+  assert.equal(mandate.capitalRange, '200M-600M');
+  assert.equal(mandate.risk, 'balanced');
+  assert.equal(limit, 5);
+}
+
+function testMandateReply() {
+  const { mandate, limit } = extractMandateFromQuestion(MANDATE_QUESTION);
+  const matches = matchMandateToParcels(mandate, limit);
+  const reply = formatMandateReply(matches, mandate);
+
+  assert.match(reply, /## Recommended parcels/);
+  assert.match(reply, /\| Rank \| Parcel \|/);
+  assert.match(reply, /balanced risk/);
+  assert.match(reply, /200M-600M/);
+  assert.match(reply, /Sources:/);
+  assert.ok(matches.length > 0);
+}
+
+function testExampleQuestionDetection() {
+  assert.equal(isPriceMomentumQuestion('Which districts have the strongest price momentum?'), true);
+  assert.equal(
+    isVacantParcelsQuestion('What are the top vacant parcels in Saadiyat Island?'),
+    true,
+  );
+  assert.equal(
+    isCapitalSupplyQuestion('Where is investor capital concentrated by sector?'),
+    true,
+  );
+  assert.equal(
+    isServiceDemandQuestion('Which districts have the highest unmet community service demand?'),
+    true,
+  );
+}
+
+function testPriceMomentumFormatting() {
+  const reply = formatPriceMomentumReply(priceTrendByDistrict(20), 5);
+  assert.match(reply, /## Strongest price momentum/);
+  assert.match(reply, /\| Rank \| District \| Momentum \|/);
+}
+
 function run() {
   testRecommendationDetection();
   testBudgetExtraction();
   testProfileExtraction();
   testPreferredDistrictFilter();
   testFormattedReply();
+  testMandateDetection();
+  testMandateExtraction();
+  testMandateReply();
+  testExampleQuestionDetection();
+  testPriceMomentumFormatting();
   console.log('copilot-profile tests passed');
 }
 

@@ -1,5 +1,12 @@
 import type { PropertyMatch } from '@/server/data/best-match';
-import { listDistricts } from '@/server/data/queries';
+import type { Mandate, ScoredMatch } from '@/server/data/matching';
+import {
+  type CapitalSupplyRow,
+  type DistrictPriceTrend,
+  listDistricts,
+  type ServiceDemandRow,
+  type TopParcel,
+} from '@/server/data/queries';
 import type { ProfileInput } from '@/server/data/recommend';
 
 export type ExtractedCopilotProfile = {
@@ -249,6 +256,240 @@ export function formatBestMatchReply(matches: PropertyMatch[], profile: ProfileI
     '**Sources:** best-match.ts (deterministic scoring over sample_transactions.csv & sample_parcels.csv)',
   );
 
+  return lines.join('\n');
+}
+
+const MANDATE_INTENT = [
+  /\bdeploy capital\b/i,
+  /\bcapital allocation\b/i,
+  /\binvestment mandate\b/i,
+  /\bfund\b/i,
+  /\binstitutional\b/i,
+];
+
+const SECTORS = [
+  'residential',
+  'commercial',
+  'hospitality',
+  'mixed_use',
+  'logistics',
+  'industrial',
+  'community',
+] as const;
+
+export function isMandateDeploymentQuestion(question: string): boolean {
+  if (!MANDATE_INTENT.some((pattern) => pattern.test(question))) return false;
+  if (extractCapitalRange(question)) return true;
+  if (/\bbalanced\b|\bconservative\b|\baggressive\b/i.test(question)) return true;
+  return SECTORS.some((sector) => new RegExp(`\\b${sector.replace('_', '[- ]?')}\\b`, 'i').test(question));
+}
+
+function extractCapitalRange(question: string): string | undefined {
+  const millionRange = question.match(
+    /(?:(?:aed\s*)?)(\d+(?:\.\d+)?)\s*m(?:illion)?\s*[-–to]+\s*(?:(?:aed\s*)?)(\d+(?:\.\d+)?)\s*m(?:illion)?/i,
+  );
+  if (millionRange) return `${millionRange[1]}M-${millionRange[2]}M`;
+
+  const mixedRange = question.match(
+    /(\d+(?:\.\d+)?)\s*m(?:illion)?\s*[-–to]+\s*(\d+(?:\.\d+)?)\s*b(?:illion)?/i,
+  );
+  if (mixedRange) return `${mixedRange[1]}M-${mixedRange[2]}B`;
+
+  return undefined;
+}
+
+function extractRiskProfile(question: string): string | undefined {
+  if (/\bconservative\b/i.test(question)) return 'conservative';
+  if (/\baggressive\b/i.test(question)) return 'aggressive';
+  if (/\bbalanced\b/i.test(question)) return 'balanced';
+  return undefined;
+}
+
+function extractSector(question: string): string | undefined {
+  for (const sector of SECTORS) {
+    const pattern = sector === 'mixed_use' ? /\bmixed[- ]use\b/i : new RegExp(`\\b${sector}\\b`, 'i');
+    if (pattern.test(question)) return sector;
+  }
+  return undefined;
+}
+
+export function extractDistrictFromQuestion(question: string): string | undefined {
+  const lower = question.toLowerCase();
+  return listDistricts()
+    .map((row) => row.district)
+    .find((district) => lower.includes(district.toLowerCase()));
+}
+
+export type ExtractedMandate = {
+  mandate: Mandate;
+  limit: number;
+};
+
+export function extractMandateFromQuestion(question: string): ExtractedMandate {
+  return {
+    mandate: {
+      capitalRange: extractCapitalRange(question),
+      risk: extractRiskProfile(question) ?? 'balanced',
+      sector: extractSector(question),
+      district: extractDistrictFromQuestion(question),
+    },
+    limit: 5,
+  };
+}
+
+export function isPriceMomentumQuestion(question: string): boolean {
+  return /\bprice momentum\b|\bstrongest momentum\b|\bmomentum\b.*\bdistrict/i.test(question);
+}
+
+export function isVacantParcelsQuestion(question: string): boolean {
+  return /\bvacant parcel/i.test(question);
+}
+
+export function isCapitalSupplyQuestion(question: string): boolean {
+  return /\bcapital.*sector\b|\binvestor capital\b|\bconcentrated by sector\b/i.test(question);
+}
+
+export function isServiceDemandQuestion(question: string): boolean {
+  return /\bservice demand\b|\bunmet\b.*\bcommunity\b/i.test(question);
+}
+
+export function formatMandateReply(matches: ScoredMatch[], mandate: Mandate): string {
+  const mandateBits: string[] = [];
+  if (mandate.risk) mandateBits.push(`${mandate.risk} risk`);
+  if (mandate.capitalRange) mandateBits.push(`capital ${mandate.capitalRange}`);
+  if (mandate.sector) mandateBits.push(`${mandate.sector} sector`);
+  if (mandate.district) mandateBits.push(`district: ${mandate.district}`);
+
+  if (matches.length === 0) {
+    return 'No parcels matched this mandate. Try widening capital range, sector, or district filters.';
+  }
+
+  const lines: string[] = [];
+  lines.push(
+    mandateBits.length > 0
+      ? `Top land parcels for your mandate (${mandateBits.join('; ')}), ranked by explainable fit score.`
+      : 'Top land parcels for your mandate, ranked by explainable fit score.',
+  );
+  lines.push('');
+  lines.push('## Recommended parcels');
+  lines.push('');
+  lines.push('| Rank | Parcel | District | Score | Value | Land use | Status |');
+  lines.push('| --- | --- | --- | --- | --- | --- | --- |');
+  matches.forEach((match, index) => {
+    const parcel = match.parcel;
+    lines.push(
+      `| ${index + 1} | \`${parcel.parcel_id}\` | ${parcel.district} | ${match.score}/100 | ${formatAed(parcel.estimated_value_aed)} | ${parcel.land_use} | ${parcel.current_status} |`,
+    );
+  });
+  lines.push('');
+  lines.push('### Why these fit');
+  matches.forEach((match, index) => {
+    if (match.reasons.length === 0) return;
+    lines.push(
+      `${index + 1}. **${match.parcel.parcel_id}** (${match.parcel.district}): ${match.reasons.join('; ')}`,
+    );
+  });
+  lines.push('');
+  lines.push('## Next action');
+  lines.push('Open **Mandate Matching** to refine sector, district, and capital range filters.');
+  lines.push('');
+  lines.push(
+    '**Sources:** sample_parcels.csv scored against the mandate (explainable fit score 0-100)',
+  );
+  return lines.join('\n');
+}
+
+export function formatPriceMomentumReply(rows: DistrictPriceTrend[], limit = 10): string {
+  const sorted = [...rows].sort((a, b) => b.momentumPct - a.momentumPct).slice(0, limit);
+  if (sorted.length === 0) {
+    return 'No transaction momentum data available.';
+  }
+
+  const lines: string[] = [
+    'Districts ranked by 6-month price momentum (recent vs prior 6 months from transaction data).',
+    '',
+    '## Strongest price momentum',
+    '',
+    '| Rank | District | Momentum | Avg price/sqm | Transactions |',
+    '| --- | --- | --- | --- | --- |',
+  ];
+  sorted.forEach((row, index) => {
+    const momentum = `${row.momentumPct >= 0 ? '+' : ''}${row.momentumPct}%`;
+    lines.push(
+      `| ${index + 1} | ${row.district} | ${momentum} | AED ${row.avgPricePerSqm.toLocaleString('en-AE')} | ${row.txnCount} |`,
+    );
+  });
+  lines.push('');
+  lines.push('**Sources:** sample_transactions.csv (2023-2026 price/sqm, recent vs prior 6mo momentum)');
+  return lines.join('\n');
+}
+
+export function formatVacantParcelsReply(parcels: TopParcel[], district?: string): string {
+  if (parcels.length === 0) {
+    return district
+      ? `No vacant parcels found in ${district}. Try another district or remove the filter.`
+      : 'No vacant parcels found in the dataset.';
+  }
+
+  const lines: string[] = [
+    district
+      ? `Top vacant parcels in **${district}** by development potential score.`
+      : 'Top vacant parcels across Abu Dhabi by development potential score.',
+    '',
+    '## Top vacant parcels',
+    '',
+    '| Rank | Parcel | District | Potential | Recommended use | Value | Land use |',
+    '| --- | --- | --- | --- | --- | --- | --- |',
+  ];
+  parcels.forEach((parcel, index) => {
+    lines.push(
+      `| ${index + 1} | \`${parcel.parcel_id}\` | ${parcel.district} | ${parcel.development_potential_score} | ${parcel.recommended_use} | ${formatAed(parcel.estimated_value_aed)} | ${parcel.land_use} |`,
+    );
+  });
+  lines.push('');
+  lines.push('**Sources:** sample_parcels.csv (current_status == vacant, by development_potential_score)');
+  return lines.join('\n');
+}
+
+export function formatCapitalSupplyReply(rows: CapitalSupplyRow[]): string {
+  if (rows.length === 0) {
+    return 'No investor mandate data available.';
+  }
+
+  const lines: string[] = [
+    'Active investor mandates grouped by preferred sector — where capital is currently pointed.',
+    '',
+    '## Investor capital by sector',
+    '',
+    '| Rank | Sector | Mandates |',
+    '| --- | --- | --- |',
+  ];
+  rows.forEach((row, index) => {
+    lines.push(`| ${index + 1} | ${row.sector} | ${row.mandates} |`);
+  });
+  lines.push('');
+  lines.push('**Sources:** sample_investors.csv (mandate counts by preferred_sector)');
+  return lines.join('\n');
+}
+
+export function formatServiceDemandReply(rows: ServiceDemandRow[]): string {
+  if (rows.length === 0) {
+    return 'No community service demand data available.';
+  }
+
+  const lines: string[] = [
+    'Districts with the highest average unmet community service demand index.',
+    '',
+    '## Service demand hotspots',
+    '',
+    '| Rank | District | Avg demand index |',
+    '| --- | --- | --- |',
+  ];
+  rows.forEach((row, index) => {
+    lines.push(`| ${index + 1} | ${row.district} | ${row.avgDemandIndex} |`);
+  });
+  lines.push('');
+  lines.push('**Sources:** sample_communities.csv (service_demand_index)');
   return lines.join('\n');
 }
 

@@ -2,9 +2,21 @@ import type OpenAI from 'openai';
 
 import { matchBestForProfile } from '@/server/data/best-match';
 import {
+  extractDistrictFromQuestion,
+  extractMandateFromQuestion,
   extractProfileFromQuestion,
   formatBestMatchReply,
+  formatCapitalSupplyReply,
+  formatMandateReply,
+  formatPriceMomentumReply,
+  formatServiceDemandReply,
+  formatVacantParcelsReply,
+  isCapitalSupplyQuestion,
+  isMandateDeploymentQuestion,
+  isPriceMomentumQuestion,
   isPropertyRecommendationQuestion,
+  isServiceDemandQuestion,
+  isVacantParcelsQuestion,
   profileInputFromToolArgs,
 } from '@/server/data/copilot-profile';
 import { matchMandateToParcels } from '@/server/data/matching';
@@ -22,6 +34,32 @@ type ToolResult = { data: unknown; source: string };
 const BEST_MATCH_SOURCE =
   'best-match.ts (deterministic scoring over sample_transactions.csv & sample_parcels.csv)';
 
+const MANDATE_SOURCE =
+  'sample_parcels.csv scored against the mandate (explainable fit score 0-100)';
+
+function runMandateTool(args: Record<string, unknown>): ToolResult {
+  const limit =
+    typeof args.limit === 'number' && Number.isFinite(args.limit)
+      ? Math.max(1, Math.min(20, Math.round(args.limit)))
+      : 5;
+  const mandate = {
+    sector: typeof args.sector === 'string' ? args.sector : undefined,
+    district: typeof args.district === 'string' ? args.district : undefined,
+    risk: typeof args.risk === 'string' ? args.risk : undefined,
+    capitalRange: typeof args.capitalRange === 'string' ? args.capitalRange : undefined,
+  };
+  const matches = matchMandateToParcels(mandate, limit);
+
+  return {
+    data: {
+      mandateUsed: mandate,
+      matchCount: matches.length,
+      matches,
+      formattedReply: formatMandateReply(matches, mandate),
+    },
+    source: MANDATE_SOURCE,
+  };
+}
 function runBestMatchTool(args: Record<string, unknown>): ToolResult {
   const limit =
     typeof args.limit === 'number' && Number.isFinite(args.limit)
@@ -70,18 +108,7 @@ const TOOLS: Record<string, (args: Record<string, unknown>) => ToolResult> = {
     data: listDistricts(),
     source: 'districts.csv (base price, yield, infrastructure, location)',
   }),
-  match_mandate_to_parcels: (args) => ({
-    data: matchMandateToParcels(
-      {
-        sector: typeof args.sector === 'string' ? args.sector : undefined,
-        district: typeof args.district === 'string' ? args.district : undefined,
-        risk: typeof args.risk === 'string' ? args.risk : undefined,
-        capitalRange: typeof args.capitalRange === 'string' ? args.capitalRange : undefined,
-      },
-      typeof args.limit === 'number' ? args.limit : 5,
-    ),
-    source: 'sample_parcels.csv scored against the mandate (explainable fit score 0-100)',
-  }),
+  match_mandate_to_parcels: runMandateTool,
 };
 
 const BEST_MATCH_TOOL_SCHEMA: OpenAI.Chat.Completions.ChatCompletionTool = {
@@ -245,6 +272,73 @@ export async function runCopilot(
     };
   }
 
+  if (isMandateDeploymentQuestion(question)) {
+    const { mandate, limit } = extractMandateFromQuestion(question);
+    const matches = matchMandateToParcels(mandate, limit);
+    return {
+      reply: formatMandateReply(matches, mandate),
+      toolsUsed: [{ name: 'match_mandate_to_parcels', source: MANDATE_SOURCE }],
+      model,
+    };
+  }
+
+  if (isPriceMomentumQuestion(question)) {
+    const rows = priceTrendByDistrict(20);
+    return {
+      reply: formatPriceMomentumReply(rows, 10),
+      toolsUsed: [
+        {
+          name: 'price_trend_by_district',
+          source: 'sample_transactions.csv (2023-2026 price/sqm, recent vs prior 6mo momentum)',
+        },
+      ],
+      model,
+    };
+  }
+
+  if (isVacantParcelsQuestion(question)) {
+    const district = extractDistrictFromQuestion(question);
+    const parcels = topVacantParcels(5, district);
+    return {
+      reply: formatVacantParcelsReply(parcels, district),
+      toolsUsed: [
+        {
+          name: 'top_vacant_parcels',
+          source: 'sample_parcels.csv (current_status == vacant, by development_potential_score)',
+        },
+      ],
+      model,
+    };
+  }
+
+  if (isCapitalSupplyQuestion(question)) {
+    const rows = capitalSupplyBySector();
+    return {
+      reply: formatCapitalSupplyReply(rows),
+      toolsUsed: [
+        {
+          name: 'capital_supply_by_sector',
+          source: 'sample_investors.csv (mandate counts by preferred_sector)',
+        },
+      ],
+      model,
+    };
+  }
+
+  if (isServiceDemandQuestion(question)) {
+    const rows = serviceDemandByDistrict(5);
+    return {
+      reply: formatServiceDemandReply(rows),
+      toolsUsed: [
+        {
+          name: 'service_demand_by_district',
+          source: 'sample_communities.csv (service_demand_index)',
+        },
+      ],
+      model,
+    };
+  }
+
   if (!openai) {
     return {
       reply:
@@ -282,7 +376,7 @@ export async function runCopilot(
       return { reply: choice.content?.trim() ?? 'No answer produced.', toolsUsed, model };
     }
 
-    let bestMatchReply: string | undefined;
+    let formattedReply: string | undefined;
 
     for (const call of calls) {
       if (call.type !== 'function') continue;
@@ -298,9 +392,12 @@ export async function runCopilot(
       }
       if (tool) toolsUsed.push({ name: call.function.name, source: result.source });
 
-      if (call.function.name === 'best_match_for_profile') {
+      if (
+        call.function.name === 'best_match_for_profile' ||
+        call.function.name === 'match_mandate_to_parcels'
+      ) {
         const data = result.data as { formattedReply?: string; emptyMessage?: string };
-        bestMatchReply = data.formattedReply ?? data.emptyMessage;
+        formattedReply = data.formattedReply ?? data.emptyMessage ?? formattedReply;
       }
 
       messages.push({
@@ -310,8 +407,8 @@ export async function runCopilot(
       });
     }
 
-    if (bestMatchReply) {
-      return { reply: bestMatchReply, toolsUsed, model };
+    if (formattedReply) {
+      return { reply: formattedReply, toolsUsed, model };
     }
   }
 
