@@ -23,7 +23,7 @@ export default defineConfig({
       // emitting "Can't resolve 'pg-native'" warnings.
       config.resolve ??= {};
       config.resolve.alias = {
-        ...(config.resolve.alias ?? {}),
+        ...config.resolve.alias,
         '@better-auth/core/async_hooks$': betterAuthPureAsyncHooks,
       };
 

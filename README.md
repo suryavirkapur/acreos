@@ -69,7 +69,8 @@ cp .env.example .env
 
 | Variable | Description |
 | --- | --- |
-| `DATABASE_URL` | PostgreSQL connection string |
+| `DATABASE_URL` | PostgreSQL connection string (`postgres://` or `postgresql://`) |
+| `POSTGRES_PRISMA_URL`, `POSTGRES_URL`, `POSTGRES_URL_NON_POOLING` | Optional hosted Postgres fallbacks used when `DATABASE_URL` is not valid |
 | `BETTER_AUTH_SECRET` | Auth signing secret (`openssl rand -base64 32`) |
 | `BETTER_AUTH_URL` | App URL (default `http://localhost:3000`) |
 | `GEMINI_API_KEY` | Google Gemini key — powers Copilot and deal memos |
@@ -84,6 +85,8 @@ cp .env.example .env
 ```bash
 pnpm db:push
 ```
+
+For production, set `DATABASE_URL` in the hosting provider to the full Postgres URL, not a label or project name. On Vercel-managed Postgres, the app can also read `POSTGRES_PRISMA_URL`, `POSTGRES_URL`, or `POSTGRES_URL_NON_POOLING`.
 
 **Local Postgres** via Prisma:
 
