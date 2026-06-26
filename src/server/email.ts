@@ -1,11 +1,7 @@
 import { Resend } from 'resend';
 
+import { recordDevOtp } from '@/server/dev-otp';
 import { getEnv } from '@/server/env';
-
-function getFromAddress(): string {
-  const env = getEnv();
-  return env.RESEND_FROM_EMAIL ?? 'AcreOS <onboarding@resend.dev>';
-}
 
 let resend: Resend | undefined;
 
@@ -13,6 +9,11 @@ function getResend(): Resend | undefined {
   const env = getEnv();
   if (!env.RESEND_API_KEY) return undefined;
   return (resend ??= new Resend(env.RESEND_API_KEY));
+}
+
+function getFromAddress(): string {
+  const env = getEnv();
+  return env.RESEND_FROM_EMAIL ?? 'AcreOS <onboarding@resend.dev>';
 }
 
 type OtpType = 'sign-in' | 'email-verification' | 'forget-password' | 'change-email';
@@ -90,26 +91,27 @@ function otpHtml(otp: string, copy: ReturnType<typeof otpCopy>) {
                     <span style="display:inline-block;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:34px;font-weight:700;letter-spacing:10px;color:#0b1020;padding-left:10px;">${otp}</span>
                   </div>
                 </div>
-                <p style="margin:12px 0 0;font-size:12px;line-height:1.5;color:#94a3b8;text-align:center;">
-                  Select the code above to copy it.
-                </p>
               </td>
             </tr>
             <tr>
               <td style="padding:20px 36px 32px;">
-                <div style="height:1px;background:#eef1f7;margin-bottom:16px;"></div>
                 <p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">
                   This code expires in 10 minutes. If you did not request it, you can safely ignore this email.
                 </p>
               </td>
             </tr>
           </table>
-          <p style="margin:18px 0 0;font-size:12px;color:#94a3b8;">© AcreOS</p>
         </td>
       </tr>
     </table>
   </body>
 </html>`;
+}
+
+function logOtpToTerminal(email: string, otp: string, type: OtpType, note?: string) {
+  console.log(`\n[AcreOS auth] ${type} code for ${email}: ${otp}`);
+  if (note) console.log(`[AcreOS auth] ${note}`);
+  console.log('');
 }
 
 export async function sendOtpEmail({
@@ -122,12 +124,16 @@ export async function sendOtpEmail({
   type: OtpType;
 }) {
   const env = getEnv();
-  const client = getResend();
   const copy = otpCopy(type);
+  const client = getResend();
+  const isDev = env.NODE_ENV !== 'production';
+
+  if (isDev) {
+    recordDevOtp(email, otp);
+  }
 
   if (!client) {
-    console.log(`\n[AcreOS auth] ${type} code for ${email}: ${otp}`);
-    console.log('[AcreOS auth] Set RESEND_API_KEY to deliver codes by email.\n');
+    logOtpToTerminal(email, otp, type, 'Set RESEND_API_KEY to deliver codes by email.');
     return;
   }
 
@@ -149,18 +155,23 @@ export async function sendOtpEmail({
     const message = error instanceof Error ? error.message : 'Failed to send verification email';
     console.error('[AcreOS auth] Resend failed:', message);
 
-    if (env.NODE_ENV !== 'production') {
-      console.log(`\n[AcreOS auth] ${type} code for ${email}: ${otp}`);
-      if (message.includes('only send testing emails')) {
-        console.log(
-          '[AcreOS auth] Resend sandbox only delivers to the account owner email until a domain is verified.\n',
-        );
-      } else {
-        console.log('');
-      }
-      return;
+    if (!isDev) {
+      throw error;
     }
 
-    throw error;
+    const sandboxNote = message.includes('only send testing emails')
+      ? 'Resend sandbox only delivers to the account owner email (suryavirkapur@hotmail.com) until a domain is verified.'
+      : 'Email delivery failed — use the code below from this terminal.';
+    logOtpToTerminal(email, otp, type, sandboxNote);
+    return;
+  }
+
+  if (isDev) {
+    logOtpToTerminal(
+      email,
+      otp,
+      type,
+      'Dev mode: code also printed here in case email delivery is delayed.',
+    );
   }
 }

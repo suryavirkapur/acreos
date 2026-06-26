@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { ArrowRight } from 'lucide-react';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,26 @@ function Verify() {
   const [loading, setLoading] = useState(false);
   const [resent, setResent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
+
+  const fetchDevOtp = useCallback(async () => {
+    if (!import.meta.env.DEV || !email) return;
+    try {
+      const response = await fetch(`/api/auth/dev-otp?email=${encodeURIComponent(email)}`);
+      if (!response.ok) return;
+      const data = (await response.json()) as { otp?: string | null };
+      if (data.otp) setDevOtp(data.otp);
+    } catch {
+      // ignore — dev helper only
+    }
+  }, [email]);
+
+  useEffect(() => {
+    void fetchDevOtp();
+    if (!import.meta.env.DEV) return;
+    const timer = window.setInterval(() => void fetchDevOtp(), 2000);
+    return () => window.clearInterval(timer);
+  }, [fetchDevOtp]);
 
   useEffect(() => {
     if (!email) navigate({ to: '/login', replace: true });
@@ -49,6 +69,7 @@ function Verify() {
       return;
     }
     setResent(true);
+    void fetchDevOtp();
   }
 
   return (
@@ -72,11 +93,17 @@ function Verify() {
           </p>
 
           {import.meta.env.DEV && (
-            <p className="mt-3 rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-              Dev tip: if no email arrives, check the terminal running{' '}
-              <code className="font-mono">pnpm dev</code>. Resend sandbox only delivers to the
-              account owner&apos;s email until a domain is verified.
-            </p>
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950">
+              <strong className="font-semibold">Dev mode:</strong> Resend sandbox only emails{' '}
+              <code className="font-mono">suryavirkapur@hotmail.com</code>. For any other address,
+              use the code below (also printed in the <code className="font-mono">pnpm dev</code>{' '}
+              terminal).
+              {devOtp ? (
+                <p className="mt-2 font-mono text-lg font-bold tracking-[0.35em]">{devOtp}</p>
+              ) : (
+                <p className="mt-2 text-amber-800">Waiting for code… click Resend code if needed.</p>
+              )}
+            </div>
           )}
 
           {resent && (
