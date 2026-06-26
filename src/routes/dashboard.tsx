@@ -35,6 +35,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { InvestorDashboard } from '@/components/investors/InvestorDashboard';
 import { Chart } from '@/components/Chart';
 import { MarketDashboard } from '@/components/market/MarketDashboard';
 import { MarketMap } from '@/components/market/MarketMap';
@@ -495,6 +496,7 @@ type Investor = {
   capital_range_aed: string;
   risk_profile: string;
   investment_horizon: string;
+  strategic_fit_score: number;
 };
 
 type Match = {
@@ -3253,62 +3255,6 @@ function PortfolioPage({
 }
 
 
-function InvestorsTable({ investors }: { investors: Investor[] }) {
-  return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0">
-        <div>
-          <CardTitle className="text-base">Investor mandates</CardTitle>
-          <p className="text-sm text-muted-foreground">{investors.length} active profiles</p>
-        </div>
-      </CardHeader>
-      <CardContent className="px-0 pb-0">
-        <div className="max-h-[640px] overflow-auto">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-card">
-              <tr className="border-y border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
-                <th className="px-6 py-3 font-semibold">Investor</th>
-                <th className="p-3 font-semibold">Sector</th>
-                <th className="p-3 font-semibold">District</th>
-                <th className="p-3 font-semibold">Capital</th>
-                <th className="px-6 py-3 font-semibold">Risk</th>
-              </tr>
-            </thead>
-            <tbody>
-              {investors.map((inv) => (
-                <tr
-                  key={inv.investor_id}
-                  className="border-b border-border/70 last:border-0 hover:bg-muted/50"
-                >
-                  <td className="px-6 py-3">
-                    <div className="font-semibold text-foreground">{inv.investor_id}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {inv.investor_type.replace('_', ' ')}
-                    </div>
-                  </td>
-                  <td className="p-3 text-foreground">{inv.preferred_sector}</td>
-                  <td className="p-3 text-muted-foreground">{inv.preferred_district}</td>
-                  <td className="p-3 text-foreground">{inv.capital_range_aed}</td>
-                  <td className="px-6 py-3">
-                    <Badge variant="outline">{inv.risk_profile}</Badge>
-                  </td>
-                </tr>
-              ))}
-              {investors.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
-                    Loading investors…
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function Dashboard() {
   const navigate = useNavigate();
   const { data: session, isPending } = authClient.useSession();
@@ -3468,7 +3414,13 @@ function Dashboard() {
 
             {tab === 'Market' && <MarketDashboard data={data} />}
 
-            {tab === 'Investors' && <InvestorsTable investors={investors} />}
+            {tab === 'Investors' && (
+              <InvestorDashboard
+                investors={investors}
+                districts={data?.districts}
+                onNavigateOpportunities={() => setTab('Opportunities')}
+              />
+            )}
           </main>
         )}
       </div>
