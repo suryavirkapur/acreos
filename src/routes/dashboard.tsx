@@ -24,7 +24,7 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import type { MouseEvent as ReactMouseEvent } from 'react';
+import type { FormEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +42,7 @@ export const Route = createFileRoute('/dashboard')({
 const TABS = [
   'Overview',
   'Profile',
+  'Best Match',
   'Copilot',
   'Opportunities',
   'Explore',
@@ -53,6 +54,7 @@ type Tab = (typeof TABS)[number];
 const NAV: { label: Tab; icon: typeof LayoutDashboard }[] = [
   { label: 'Overview', icon: LayoutDashboard },
   { label: 'Profile', icon: UserCircle },
+  { label: 'Best Match', icon: MapPin },
   { label: 'Copilot', icon: Sparkles },
   { label: 'Opportunities', icon: Building2 },
   { label: 'Explore', icon: Search },
@@ -63,6 +65,7 @@ const NAV: { label: Tab; icon: typeof LayoutDashboard }[] = [
 const TAB_SUBTITLE: Record<Tab, string> = {
   Overview: 'Grounded in Abu Dhabi parcels, transactions, investors & communities',
   Profile: 'Tell us how you invest — we tailor everything to it',
+  'Best Match': 'Find properties that exactly match your preferences',
   Copilot: 'Ask cross-dataset questions, get cited answers',
   Opportunities: 'Match investor mandates to land parcels',
   Explore: 'Filter and drill into the parcel & transaction data',
@@ -88,6 +91,47 @@ const SECTORS = [
   'industrial',
   'community',
 ];
+
+const PURPOSES = ['live', 'invest', 'commercial', 'holiday_home'] as const;
+const PROPERTY_TYPES = ['apartment', 'townhouse', 'villa', 'office', 'retail', 'warehouse'] as const;
+const LIFESTYLE_PRIORITIES = [
+  'commute',
+  'schools',
+  'beach',
+  'restaurants',
+  'investment_growth',
+  'rental_yield',
+  'quiet_area',
+] as const;
+
+type BestMatchForm = {
+  purpose: string;
+  workplaceDistrict?: string;
+  budgetMinAed?: number;
+  budgetMaxAed?: number;
+  preferredDistricts?: string[];
+  propertyType?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  minSizeSqm?: number;
+  mustHaveAmenities?: string[];
+  lifestylePriorities?: string[];
+};
+
+type PropertyMatchResult = {
+  id: string;
+  kind: 'transaction' | 'parcel';
+  district: string;
+  propertyType?: string;
+  priceAed?: number;
+  sizeSqm?: number;
+  estimatedBedrooms?: number;
+  estimatedBathrooms?: number;
+  score: number;
+  scoreBreakdown: Record<string, number>;
+  reasons: string[];
+  tradeoffs: string[];
+};
 
 type InvestorProfile = {
   investorType: 'retail' | 'institutional';
@@ -1471,6 +1515,406 @@ function ProfilePage({
   );
 }
 
+function BestMatchPage({ facets }: { facets: Facets | null }) {
+  const [form, setForm] = useState<BestMatchForm>({ purpose: 'live' });
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [emptyMessage, setEmptyMessage] = useState<string | null>(null);
+  const [results, setResults] = useState<PropertyMatchResult[]>([]);
+
+  const districts = facets?.districts ?? [];
+
+  useEffect(() => {
+    fetch('/api/intel/profile')
+      .then((r) => r.json())
+      .then((d) => {
+        const p = d.profile;
+        if (!p) return;
+        setForm((prev) => ({
+          ...prev,
+          purpose: p.purpose ?? prev.purpose,
+          workplaceDistrict: p.workplaceDistrict ?? prev.workplaceDistrict,
+          budgetMinAed: p.budgetMinAed ?? prev.budgetMinAed,
+          budgetMaxAed: p.budgetMaxAed ?? p.budgetAed ?? prev.budgetMaxAed,
+          preferredDistricts: p.preferredDistricts ?? prev.preferredDistricts,
+          propertyType: p.propertyType ?? prev.propertyType,
+          bedrooms: p.bedrooms ?? prev.bedrooms,
+          bathrooms: p.bathrooms ?? prev.bathrooms,
+          minSizeSqm: p.minSizeSqm ?? prev.minSizeSqm,
+          mustHaveAmenities: p.mustHaveAmenities ?? prev.mustHaveAmenities,
+          lifestylePriorities: p.lifestylePriorities ?? prev.lifestylePriorities,
+        }));
+      })
+      .catch(() => {});
+  }, []);
+
+  function update(patch: Partial<BestMatchForm>) {
+    setForm((f) => ({ ...f, ...patch }));
+    setSaved(false);
+  }
+
+  function toggleList(key: 'mustHaveAmenities' | 'preferredDistricts' | 'lifestylePriorities', value: string) {
+    setForm((f) => {
+      const current = f[key] ?? [];
+      const next = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      return { ...f, [key]: next };
+    });
+    setSaved(false);
+  }
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+    setEmptyMessage(null);
+    setResults([]);
+
+    try {
+      const res = await fetch('/api/intel/best-match', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ profile: form, limit: 5 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message ?? data.error ?? 'Could not find matches.');
+        return;
+      }
+      if ((data.matches ?? []).length === 0) {
+        setEmptyMessage(
+          data.message ??
+            'No matches found for these exact preferences. Try widening your budget, districts, property type, or size requirements.',
+        );
+        return;
+      }
+      setResults(data.matches);
+    } catch {
+      setError('Request failed. Is the server running?');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveToProfile() {
+    setSaving(true);
+    setSaved(false);
+    try {
+      const res = await fetch('/api/intel/profile', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...form, investorType: 'retail' }),
+      });
+      if (res.ok) setSaved(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Find My Best Match</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Hard filters apply to districts, budget, property type, size, and bedrooms. Results only
+            include exact matches.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-5" onSubmit={onSubmit}>
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">
+                Purpose <span className="text-destructive">*</span>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {PURPOSES.map((p) => (
+                  <Chip
+                    key={p}
+                    label={p}
+                    active={form.purpose === p}
+                    onClick={() => update({ purpose: p })}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">
+                Property type <span className="text-destructive">*</span>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {PROPERTY_TYPES.map((t) => (
+                  <Chip
+                    key={t}
+                    label={t}
+                    active={form.propertyType === t}
+                    onClick={() => update({ propertyType: t })}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label htmlFor="bm-budget-min" className="block text-xs font-semibold text-muted-foreground">
+                Budget min (AED)
+                <Input
+                  id="bm-budget-min"
+                  type="number"
+                  min={0}
+                  step={50000}
+                  value={form.budgetMinAed ?? ''}
+                  onChange={(e) =>
+                    update({ budgetMinAed: Number(e.target.value) || undefined })
+                  }
+                  className="mt-1"
+                  placeholder="500,000"
+                />
+              </label>
+              <label htmlFor="bm-budget-max" className="block text-xs font-semibold text-muted-foreground">
+                Budget max (AED) <span className="text-destructive">*</span>
+                <Input
+                  id="bm-budget-max"
+                  type="number"
+                  min={0}
+                  step={50000}
+                  value={form.budgetMaxAed ?? ''}
+                  onChange={(e) =>
+                    update({ budgetMaxAed: Number(e.target.value) || undefined })
+                  }
+                  className="mt-1"
+                  placeholder="2,000,000"
+                />
+              </label>
+            </div>
+
+            <label htmlFor="bm-workplace" className="block text-xs font-semibold text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Briefcase className="size-3.5" /> Workplace district
+              </span>
+              <select
+                id="bm-workplace"
+                value={form.workplaceDistrict ?? ''}
+                onChange={(e) => update({ workplaceDistrict: e.target.value || undefined })}
+                className="mt-1 h-9 w-full max-w-md rounded-md border border-border bg-background px-3 text-sm text-foreground"
+              >
+                <option value="">Select district (e.g. ADGM → Al Maryah Island)</option>
+                {districts.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">Preferred districts</p>
+              <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto">
+                {districts.map((d) => (
+                  <Chip
+                    key={d}
+                    label={d}
+                    active={form.preferredDistricts?.includes(d) ?? false}
+                    onClick={() => toggleList('preferredDistricts', d)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <label htmlFor="bm-bedrooms" className="block text-xs font-semibold text-muted-foreground">
+                Bedrooms
+                <Input
+                  id="bm-bedrooms"
+                  type="number"
+                  min={0}
+                  max={12}
+                  value={form.bedrooms ?? ''}
+                  onChange={(e) => update({ bedrooms: Number(e.target.value) || undefined })}
+                  className="mt-1"
+                />
+              </label>
+              <label htmlFor="bm-bathrooms" className="block text-xs font-semibold text-muted-foreground">
+                Bathrooms
+                <Input
+                  id="bm-bathrooms"
+                  type="number"
+                  min={0}
+                  max={12}
+                  value={form.bathrooms ?? ''}
+                  onChange={(e) => update({ bathrooms: Number(e.target.value) || undefined })}
+                  className="mt-1"
+                />
+              </label>
+              <label htmlFor="bm-minsize" className="block text-xs font-semibold text-muted-foreground">
+                Min size (sqm)
+                <Input
+                  id="bm-minsize"
+                  type="number"
+                  min={0}
+                  value={form.minSizeSqm ?? ''}
+                  onChange={(e) => update({ minSizeSqm: Number(e.target.value) || undefined })}
+                  className="mt-1"
+                />
+              </label>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Bedrooms and bathrooms may be estimated from property size when listing-level data is
+              unavailable.
+            </p>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">Must-have amenities</p>
+              <div className="flex flex-wrap gap-2">
+                {AMENITY_CATEGORIES.map((cat) => (
+                  <Chip
+                    key={cat}
+                    label={cat}
+                    active={form.mustHaveAmenities?.includes(cat) ?? false}
+                    onClick={() => toggleList('mustHaveAmenities', cat)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">Lifestyle priorities</p>
+              <div className="flex flex-wrap gap-2">
+                {LIFESTYLE_PRIORITIES.map((p) => (
+                  <Chip
+                    key={p}
+                    label={p}
+                    active={form.lifestylePriorities?.includes(p) ?? false}
+                    onClick={() => toggleList('lifestylePriorities', p)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button type="submit" disabled={loading || !form.purpose || !form.propertyType}>
+                <MapPin className="size-4" />
+                {loading ? 'Finding matches…' : 'Find my best match'}
+              </Button>
+              <Button type="button" variant="outline" onClick={saveToProfile} disabled={saving}>
+                {saved ? <Check className="size-4" /> : null}
+                {saving ? 'Saving…' : saved ? 'Saved to profile' : 'Save preferences to profile'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <div className="space-y-4">
+        {error && (
+          <Card className="border-destructive/40 bg-destructive/5">
+            <CardContent className="py-4 text-sm font-medium text-destructive">{error}</CardContent>
+          </Card>
+        )}
+
+        {emptyMessage && !loading && (
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              {emptyMessage}
+            </CardContent>
+          </Card>
+        )}
+
+        {loading && (
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              Searching for exact matches…
+            </CardContent>
+          </Card>
+        )}
+
+        {results.map((match, index) => (
+          <Card key={match.id}>
+            <CardHeader className="flex-row items-start justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-base">
+                  #{index + 1} · {match.district}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  {match.kind} · {titleCase(match.propertyType ?? 'unknown')}
+                </p>
+              </div>
+              <Badge variant="success">{match.score}</Badge>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {match.priceAed != null && (
+                  <div>
+                    <span className="text-muted-foreground">Price</span>
+                    <p className="font-semibold text-foreground">{aedShort(match.priceAed)}</p>
+                  </div>
+                )}
+                {match.sizeSqm != null && (
+                  <div>
+                    <span className="text-muted-foreground">Size</span>
+                    <p className="font-semibold text-foreground">{match.sizeSqm} sqm</p>
+                  </div>
+                )}
+                {match.estimatedBedrooms != null && (
+                  <div>
+                    <span className="text-muted-foreground">Est. beds</span>
+                    <p className="font-semibold text-foreground">{match.estimatedBedrooms}</p>
+                  </div>
+                )}
+                {match.estimatedBathrooms != null && (
+                  <div>
+                    <span className="text-muted-foreground">Est. baths</span>
+                    <p className="font-semibold text-foreground">{match.estimatedBathrooms}</p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground">Why it matched</p>
+                <p className="mt-1 text-xs text-foreground">{match.reasons.join(' · ')}</p>
+              </div>
+
+              {match.tradeoffs.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Tradeoffs</p>
+                  <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
+                    {match.tradeoffs.map((t) => (
+                      <li key={t}>{t}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div>
+                <p className="mb-1 text-xs font-semibold text-muted-foreground">Score breakdown</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(match.scoreBreakdown).map(([key, value]) => (
+                    <Badge key={key} variant="outline" className="text-[0.65rem]">
+                      {titleCase(key)} {value}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {!loading && !error && !emptyMessage && results.length === 0 && (
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              Set your preferences and run a search to see ranked matches.
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function OverviewPage({
   data,
   onNavigate,
@@ -1900,6 +2344,8 @@ function Dashboard() {
           {tab === 'Overview' && <OverviewPage data={data} onNavigate={setTab} />}
 
           {tab === 'Profile' && <ProfilePage facets={facets} onNavigate={setTab} />}
+
+          {tab === 'Best Match' && <BestMatchPage facets={facets} />}
 
           {tab === 'Copilot' && (
             <div className="mx-auto max-w-3xl">

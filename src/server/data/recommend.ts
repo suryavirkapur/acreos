@@ -19,6 +19,14 @@ export type ProfileInput = {
   mustHaveAmenities?: string[];
   workplaceDistrict?: string;
   horizon?: string;
+  purpose?: string;
+  propertyType?: string;
+  budgetMinAed?: number;
+  budgetMaxAed?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  minSizeSqm?: number;
+  lifestylePriorities?: string[];
 };
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
