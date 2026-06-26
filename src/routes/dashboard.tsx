@@ -2129,15 +2129,15 @@ function OverviewPage({
               <Sparkles className="size-5" />
             </span>
             <div>
-              <p className="font-semibold text-foreground">Ask the Decision Copilot</p>
+              <p className="font-semibold text-foreground">Ask the assistant</p>
               <p className="text-sm text-muted-foreground">
                 Cross-dataset answers with cited sources — e.g. where a balanced fund should deploy.
               </p>
             </div>
           </div>
-          <Button onClick={() => onNavigate('Copilot')}>
-            <Sparkles className="size-4" />
-            Open Copilot
+          <Button onClick={() => onNavigate('Assistant')}>
+            <Dog className="size-4" />
+            Open Assistant
           </Button>
         </CardContent>
       </Card>
@@ -2489,7 +2489,7 @@ function Dashboard() {
           </div>
         </header>
 
-        {tab === 'Copilot' ? (
+        {tab === 'Assistant' ? (
           <main className="flex min-h-0 flex-1 flex-col">
             <Copilot />
           </main>

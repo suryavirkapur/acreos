@@ -431,8 +431,7 @@ function ProductShowcase({
           <span className="showcase-bubble">{bubble}</span>
           <img
             src="/corgi-hero.png"
-            alt=""
-            aria-hidden="true"
+            alt="The AcreOS assistant"
             className="showcase-mascot"
             loading="lazy"
           />

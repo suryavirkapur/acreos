@@ -1,4 +1,7 @@
+import { GoogleGenAI } from '@google/genai';
+
 import { getDb } from '@/server/db';
+import { getEnv } from '@/server/env';
 import { getOpenAiClient, getOpenAiModel } from '@/server/openai';
 import {
   capitalSupplyBySector,
@@ -135,52 +138,29 @@ function coercePayload(parsed: unknown): { news: NewsItem[]; actions: PortfolioA
   return { news, actions };
 }
 
-async function generateWithGemini(): Promise<MarketNewsPayload | null> {
-  const openai = getOpenAiClient();
-  if (!openai) return null;
+const USER_PROMPT = (context: string) =>
+  `Search for today's latest Abu Dhabi and Dubai real-estate market news, then tell me what ` +
+  `actions I should take on my portfolio. Respond with ONLY the JSON object described above — ` +
+  `no commentary, no markdown fences.\n\n${context}`;
 
-  const model = getOpenAiModel();
-  const messages = [
-    { role: 'system' as const, content: SYSTEM_PROMPT },
-    {
-      role: 'user' as const,
-      content: `Give me today's latest Abu Dhabi and Dubai real-estate market news and the actions I should take on my portfolio.\n\n${buildContext()}`,
-    },
-  ];
+/**
+ * Grounded path: uses the @google/genai Interactions API with the google_search
+ * tool so the news is pulled from live web results, not just model memory.
+ */
+async function generateWithGoogleSearch(): Promise<MarketNewsPayload | null> {
+  const env = getEnv();
+  if (!env.GEMINI_API_KEY) return null;
 
-  let content: string | undefined;
-  let grounded = false;
+  const client = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+  const model = env.GEMINI_SEARCH_MODEL;
 
-  // First attempt: enable Gemini's Google Search grounding for genuinely recent news.
-  try {
-    const completion = await openai.chat.completions.create({
-      model,
-      messages,
-      max_tokens: 2400,
-      tools: [{ googleSearch: {} }],
-    } as never);
-    content = completion.choices[0]?.message?.content?.trim();
-    grounded = true;
-  } catch {
-    content = undefined;
-  }
+  const interaction = await client.interactions.create({
+    model,
+    input: `${SYSTEM_PROMPT}\n\n${USER_PROMPT(buildContext())}`,
+    tools: [{ type: 'google_search' }],
+  });
 
-  // Fallback: plain JSON-mode completion using the model's own knowledge.
-  if (!content) {
-    grounded = false;
-    try {
-      const completion = await openai.chat.completions.create({
-        model,
-        messages,
-        max_tokens: 2400,
-        response_format: { type: 'json_object' },
-      });
-      content = completion.choices[0]?.message?.content?.trim();
-    } catch {
-      content = undefined;
-    }
-  }
-
+  const content = interaction.output_text?.trim();
   if (!content) return null;
 
   const coerced = coercePayload(extractJson(content));
@@ -189,10 +169,55 @@ async function generateWithGemini(): Promise<MarketNewsPayload | null> {
   return {
     generatedAt: new Date().toISOString(),
     model,
-    grounded,
+    grounded: true,
     news: coerced.news,
     actions: coerced.actions,
   };
+}
+
+/**
+ * Fallback path: OpenAI-compatible Gemini endpoint in JSON mode, using the
+ * model's own knowledge when grounded search is unavailable.
+ */
+async function generateWithJsonMode(): Promise<MarketNewsPayload | null> {
+  const openai = getOpenAiClient();
+  if (!openai) return null;
+
+  const model = getOpenAiModel();
+  try {
+    const completion = await openai.chat.completions.create({
+      model,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: USER_PROMPT(buildContext()) },
+      ],
+      max_tokens: 2400,
+      response_format: { type: 'json_object' },
+    });
+    const content = completion.choices[0]?.message?.content?.trim();
+    if (!content) return null;
+    const coerced = coercePayload(extractJson(content));
+    if (!coerced) return null;
+    return {
+      generatedAt: new Date().toISOString(),
+      model,
+      grounded: false,
+      news: coerced.news,
+      actions: coerced.actions,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function generateNews(): Promise<MarketNewsPayload | null> {
+  try {
+    const grounded = await generateWithGoogleSearch();
+    if (grounded) return grounded;
+  } catch (error) {
+    console.error('grounded news generation failed, falling back', error);
+  }
+  return generateWithJsonMode();
 }
 
 /**
@@ -214,7 +239,7 @@ export async function getDailyMarketNews(force = false): Promise<MarketNewsPaylo
     }
   }
 
-  const generated = await generateWithGemini();
+  const generated = await generateNews();
   const payload: MarketNewsPayload = generated ?? {
     generatedAt: new Date().toISOString(),
     model: null,

@@ -33,6 +33,7 @@ const envSchema = z.object({
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default('gemini-2.0-flash'),
+  GEMINI_SEARCH_MODEL: z.string().default('gemini-3.5-flash'),
   GEMINI_BASE_URL: z
     .string()
     .default('https://generativelanguage.googleapis.com/v1beta/openai/'),
