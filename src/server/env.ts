@@ -1,9 +1,16 @@
+import 'dotenv/config';
+
 import { z } from 'zod';
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default('gpt-4o-mini'),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().default('gemini-2.0-flash'),
+  GEMINI_BASE_URL: z
+    .string()
+    .default('https://generativelanguage.googleapis.com/v1beta/openai/'),
   BETTER_AUTH_SECRET: z.string().min(1).default('dev-acreos-secret-change-me'),
   BETTER_AUTH_URL: z.string().default('http://localhost:3000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),

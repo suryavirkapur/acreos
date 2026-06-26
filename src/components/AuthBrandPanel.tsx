@@ -27,9 +27,9 @@ export function AuthBrandPanel() {
   return (
     <div
       className="relative hidden overflow-hidden lg:block"
-      style={{ backgroundColor: '#1a120d' }}
+      style={{ backgroundColor: '#0b1020' }}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(900px_500px_at_15%_0%,rgba(238,91,43,0.45),transparent_60%),radial-gradient(700px_500px_at_100%_100%,rgba(238,91,43,0.18),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(900px_500px_at_15%_0%,rgba(43,80,240,0.5),transparent_60%),radial-gradient(700px_500px_at_100%_100%,rgba(43,80,240,0.2),transparent_55%)]" />
       <div className="relative flex h-full flex-col justify-between p-12 text-white">
         <span className="font-serif text-xl font-semibold tracking-tight">AcreOS</span>
 
@@ -64,8 +64,7 @@ export function AuthBrandPanel() {
         </div>
 
         <p className="text-xs text-white/40">
-          &copy; {new Date().getFullYear()} AcreOS, Inc. Backed by Y Combinator, Kindred Ventures
-          &amp; Contrary.
+          &copy; {new Date().getFullYear()} AcreOS, Inc. Backed by EVoss &amp; Cursor.
         </p>
       </div>
     </div>

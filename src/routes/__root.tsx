@@ -19,6 +19,10 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
+        name: 'theme-color',
+        content: '#2b50f0',
+      },
+      {
         title: 'AcreOS — Property investment, run by AI agents',
       },
     ],
@@ -26,6 +30,25 @@ export const Route = createRootRoute({
       {
         rel: 'stylesheet',
         href: appCss,
+      },
+      {
+        rel: 'icon',
+        href: '/favicon.ico',
+        sizes: '48x48',
+      },
+      {
+        rel: 'icon',
+        type: 'image/png',
+        sizes: '192x192',
+        href: '/logo192.png',
+      },
+      {
+        rel: 'apple-touch-icon',
+        href: '/logo192.png',
+      },
+      {
+        rel: 'manifest',
+        href: '/manifest.json',
       },
     ],
   }),

@@ -2,13 +2,40 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { Scalar } from '@scalar/hono-api-reference';
 
 import { getAuth } from '@/server/auth';
+import { runCopilot } from '@/server/data/copilot';
+import { matchInvestorToParcels } from '@/server/data/matching';
+import { generateDealMemo } from '@/server/data/memo';
+import {
+  capitalSupplyBySector,
+  listInvestors,
+  portfolioSummary,
+  priceTrendByDistrict,
+  serviceDemandByDistrict,
+  topVacantParcels,
+} from '@/server/data/queries';
 import { chatHandler, chatRoute } from '@/server/routes/chat';
 import { healthHandler, healthRoute } from '@/server/routes/health';
 
 const app = new OpenAPIHono().basePath('/api');
 
 // Better Auth handles all /api/auth/* requests (email OTP, sessions, etc.)
-app.on(['GET', 'POST'], '/auth/*', (c) => getAuth().handler(c.req.raw));
+app.on(['GET', 'POST'], '/auth/*', (c) => {
+  try {
+    return getAuth().handler(c.req.raw);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('DATABASE_URL')) {
+      return c.json(
+        {
+          error: 'database_not_configured',
+          message: 'DATABASE_URL is required for authentication.',
+        },
+        503,
+      );
+    }
+
+    throw error;
+  }
+});
 
 app.openapi(healthRoute, async (c) => {
   const payload = await healthHandler();
@@ -18,7 +45,51 @@ app.openapi(healthRoute, async (c) => {
 app.openapi(chatRoute, async (c) => {
   const input = c.req.valid('json');
   const result = await chatHandler(input);
+  if (result.status === 200) {
+    return c.json(result.body, 200);
+  }
   return c.json(result.body, result.status);
+});
+
+// --- AcreOS intelligence API -------------------------------------------------
+
+app.get('/intel/summary', (c) => {
+  return c.json({
+    summary: portfolioSummary(),
+    priceTrends: priceTrendByDistrict(8),
+    topVacant: topVacantParcels(6),
+    capitalSupply: capitalSupplyBySector(6),
+    serviceDemand: serviceDemandByDistrict(5),
+  });
+});
+
+app.get('/intel/investors', (c) => {
+  return c.json({ investors: listInvestors() });
+});
+
+app.post('/intel/match', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const investorId = typeof body.investorId === 'string' ? body.investorId : '';
+  const result = matchInvestorToParcels(investorId, 5);
+  if (!result) return c.json({ error: `unknown investor ${investorId}` }, 404);
+  return c.json(result);
+});
+
+app.post('/intel/deal-memo', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const investorId = typeof body.investorId === 'string' ? body.investorId : '';
+  const parcelId = typeof body.parcelId === 'string' ? body.parcelId : '';
+  const result = await generateDealMemo(investorId, parcelId);
+  if ('error' in result) return c.json(result, 400);
+  return c.json(result);
+});
+
+app.post('/intel/copilot', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const question = typeof body.question === 'string' ? body.question.trim() : '';
+  if (!question) return c.json({ error: 'question is required' }, 400);
+  const result = await runCopilot(question);
+  return c.json(result);
 });
 
 app.doc('/openapi', {

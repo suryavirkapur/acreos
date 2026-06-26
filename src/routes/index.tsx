@@ -15,14 +15,7 @@ export const Route = createFileRoute('/')({
   component: App,
 });
 
-const INVESTORS = [
-  'Y Combinator',
-  'Kindred Ventures',
-  'Seven Stars',
-  'Contrary',
-  'SV Angel',
-  'Rebel',
-];
+const INVESTORS = ['EVoss', 'Cursor'];
 
 const FLOW = [
   {

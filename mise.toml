@@ -1,6 +1,6 @@
 [tools]
 node = "25"
-pnpm = "11"
+pnpm = "10"
 
 [env]
 _.file = ".env"

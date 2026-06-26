@@ -38,15 +38,15 @@
   --ink: #17120e;
   --ink-soft: #5b544c;
   --ink-faint: #948c81;
-  --ink-deep: #1a120d;
+  --ink-deep: #0b1020;
   --paper: #f7f4ee;
   --paper-soft: #eee9df;
   --card: #ffffff;
   --line: rgba(23, 18, 14, 0.1);
   --line-strong: rgba(23, 18, 14, 0.16);
-  --brand: #e6552a;
-  --brand-deep: #c5451d;
-  --brand-soft: #f9e6dc;
+  --brand: #2b50f0;
+  --brand-deep: #1d39c4;
+  --brand-soft: #e3e9ff;
   --sage: #3f5a46;
 }
 
@@ -66,8 +66,8 @@ body {
   font-family: var(--font-sans);
   background-color: var(--paper);
   background:
-    radial-gradient(1000px 560px at 100% -8%, rgba(230, 85, 42, 0.07), transparent 60%),
-    radial-gradient(820px 480px at -6% 4%, rgba(63, 90, 70, 0.06), transparent 58%),
+    radial-gradient(1000px 560px at 100% -8%, rgba(43, 80, 240, 0.08), transparent 60%),
+    radial-gradient(820px 480px at -6% 4%, rgba(43, 80, 240, 0.05), transparent 58%),
     linear-gradient(180deg, #faf8f3 0%, var(--paper) 52%, var(--paper-soft) 100%);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -147,7 +147,7 @@ a {
   color: #fff;
   font-weight: 700;
   padding: 0.85rem 1.5rem;
-  box-shadow: 0 10px 24px rgba(238, 91, 43, 0.28);
+  box-shadow: 0 10px 24px rgba(43, 80, 240, 0.28);
   transition:
     transform 160ms ease,
     background-color 160ms ease,
@@ -157,7 +157,7 @@ a {
 .btn-brand:hover {
   background: var(--brand-deep);
   transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(238, 91, 43, 0.36);
+  box-shadow: 0 14px 30px rgba(43, 80, 240, 0.36);
 }
 
 /* plain text login link (matches reference) */
@@ -258,7 +258,7 @@ a {
 
 .field:focus {
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(238, 91, 43, 0.18);
+  box-shadow: 0 0 0 3px rgba(43, 80, 240, 0.18);
 }
 
 .link-brand {
@@ -371,8 +371,8 @@ a {
 .surface-dark {
   position: relative;
   background:
-    radial-gradient(820px 480px at 12% 0%, rgba(230, 85, 42, 0.28), transparent 56%),
-    radial-gradient(720px 460px at 100% 100%, rgba(230, 85, 42, 0.12), transparent 52%),
+    radial-gradient(820px 480px at 12% 0%, rgba(43, 80, 240, 0.32), transparent 56%),
+    radial-gradient(720px 460px at 100% 100%, rgba(43, 80, 240, 0.14), transparent 52%),
     var(--ink-deep);
   color: #fff;
 }

@@ -28,16 +28,27 @@ export default function Footer() {
           <div key={col.title}>
             <p className="island-kicker mb-3 text-(--ink-faint)">{col.title}</p>
             <ul className="m-0 list-none space-y-2 p-0">
-              {col.links.map((link) => (
-                <li key={link}>
-                  <a
-                    href={`#${link.toLowerCase().replace(/\s+/g, '-')}`}
-                    className="text-sm text-(--ink-soft) transition hover:text-(--ink)"
-                  >
-                    {link}
-                  </a>
-                </li>
-              ))}
+              {col.links.map((link) =>
+                link === 'About' ? (
+                  <li key={link}>
+                    <Link
+                      to="/about"
+                      className="text-sm text-(--ink-soft) transition hover:text-(--ink)"
+                    >
+                      {link}
+                    </Link>
+                  </li>
+                ) : (
+                  <li key={link}>
+                    <a
+                      href={`#${link.toLowerCase().replace(/\s+/g, '-')}`}
+                      className="text-sm text-(--ink-soft) transition hover:text-(--ink)"
+                    >
+                      {link}
+                    </a>
+                  </li>
+                ),
+              )}
             </ul>
           </div>
         ))}
