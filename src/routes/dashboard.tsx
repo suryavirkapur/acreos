@@ -6,11 +6,15 @@ import {
   Building2,
   Calculator,
   Check,
+  Dog,
   FileText,
   History,
   LayoutDashboard,
   LogOut,
   MapPin,
+  Newspaper,
+  RefreshCw,
+  TrendingDown,
   Plus,
   Search,
   Send,
@@ -60,7 +64,7 @@ const TABS = [
   'Overview',
   'Profile',
   'Best Match',
-  'Copilot',
+  'Assistant',
   'Opportunities',
   'Explore',
   'Market',
@@ -72,7 +76,7 @@ const NAV: { label: Tab; icon: typeof LayoutDashboard }[] = [
   { label: 'Overview', icon: LayoutDashboard },
   { label: 'Profile', icon: UserCircle },
   { label: 'Best Match', icon: MapPin },
-  { label: 'Copilot', icon: Sparkles },
+  { label: 'Assistant', icon: Dog },
   { label: 'Opportunities', icon: Building2 },
   { label: 'Explore', icon: Search },
   { label: 'Market', icon: TrendingUp },
@@ -83,7 +87,7 @@ const TAB_SUBTITLE: Record<Tab, string> = {
   Overview: 'Grounded in Abu Dhabi parcels, transactions, investors & communities',
   Profile: 'Tell us how you invest — we tailor everything to it',
   'Best Match': 'Find properties that exactly match your preferences',
-  Copilot: 'Ask cross-dataset questions, get cited answers',
+  Assistant: 'Ask cross-dataset questions, get cited answers',
   Opportunities: 'Match investor mandates to land parcels',
   Explore: 'Filter and drill into the parcel & transaction data',
   Market: 'District price levels and momentum',
@@ -232,6 +236,30 @@ type Summary = {
   serviceDemand: Array<{ district: string; avgDemandIndex: number }>;
 };
 
+type NewsItem = {
+  title: string;
+  summary: string;
+  market: 'Dubai' | 'Abu Dhabi' | 'UAE';
+  sentiment: 'positive' | 'neutral' | 'negative';
+  category?: string;
+  source?: string;
+};
+
+type PortfolioAction = {
+  title: string;
+  detail: string;
+  priority: 'high' | 'medium' | 'low';
+  market?: string;
+};
+
+type MarketNews = {
+  generatedAt: string;
+  model: string | null;
+  grounded: boolean;
+  news: NewsItem[];
+  actions: PortfolioAction[];
+};
+
 type Investor = {
   investor_id: string;
   investor_type: string;
@@ -311,13 +339,26 @@ function UserMenu({ email, onSignOut }: { email: string; onSignOut: () => void }
 }
 
 const SUGGESTED = [
+  'Chart the districts with the strongest price momentum.',
+  'Show investor capital concentration by sector as a donut chart.',
   'Where should a balanced fund with AED 200M-600M deploy capital this quarter?',
-  'Which districts have the strongest price momentum?',
-  'What are the top vacant parcels in Saadiyat Island?',
-  'Where is investor capital concentrated by sector?',
+  'Compare average price per sqm across the top districts.',
 ];
 
 type ConversationMeta = { id: string; title: string; updatedAt: string };
+
+function AssistantAvatar({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        'flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-primary/10',
+        className,
+      )}
+    >
+      <img src="/corgi-hero.png" alt="AcreOS assistant" className="size-full object-cover" />
+    </span>
+  );
+}
 
 function Copilot() {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
@@ -404,162 +445,188 @@ function Copilot() {
   }
 
   return (
-    <Card className="flex h-[640px] flex-col" id="copilot">
-      <CardHeader className="flex-row items-center justify-between space-y-0 border-b border-border">
-        <div className="flex items-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary/12 text-primary">
-            <Sparkles className="size-4.5" />
-          </span>
-          <div>
-            <CardTitle className="text-base">Decision Copilot</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Asks across parcels, transactions, investors & communities
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowHistory((v) => !v)}
-            aria-label="Chat history"
-          >
-            <History className="size-4" />
-            <span className="hidden sm:inline">History</span>
-            {history.length > 0 && <Badge variant="secondary">{history.length}</Badge>}
-          </Button>
-          <Button variant="outline" size="sm" onClick={newChat} aria-label="New chat">
-            <Plus className="size-4" />
-            <span className="hidden sm:inline">New</span>
-          </Button>
-        </div>
-      </CardHeader>
-
+    <div className="flex h-full min-h-0" id="copilot">
       {showHistory && (
-        <div className="max-h-64 overflow-y-auto border-b border-border bg-muted/30">
-          {history.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-muted-foreground">No saved chats yet.</p>
-          )}
-          {history.map((conv) => (
-            <div
-              key={conv.id}
-              className={cn(
-                'group flex items-center justify-between gap-2 border-b border-border/60 transition-colors last:border-0 hover:bg-muted',
-                conv.id === conversationId && 'bg-primary/8',
-              )}
-            >
-              <button
-                type="button"
-                onClick={() => loadConversation(conv.id)}
-                className="min-w-0 flex-1 py-2.5 pl-4 text-left"
+        <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-card/60 md:flex">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <span className="text-sm font-semibold text-foreground">Chat history</span>
+            <Button variant="ghost" size="icon" onClick={newChat} aria-label="New chat">
+              <Plus className="size-4" />
+            </Button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {history.length === 0 && (
+              <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+                No saved chats yet.
+              </p>
+            )}
+            {history.map((conv) => (
+              <div
+                key={conv.id}
+                className={cn(
+                  'group flex items-center justify-between gap-2 border-b border-border/60 transition-colors last:border-0 hover:bg-muted',
+                  conv.id === conversationId && 'bg-primary/8',
+                )}
               >
-                <span className="block truncate text-sm font-medium text-foreground">
-                  {conv.title}
-                </span>
-                <span className="block text-xs text-muted-foreground">
-                  {new Date(conv.updatedAt).toLocaleString()}
-                </span>
-              </button>
-              <button
-                type="button"
-                aria-label="Delete chat"
-                onClick={(e) => removeConversation(conv.id, e)}
-                className="mr-2 shrink-0 rounded p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-              >
-                <Trash2 className="size-4" />
-              </button>
-            </div>
-          ))}
-        </div>
+                <button
+                  type="button"
+                  onClick={() => loadConversation(conv.id)}
+                  className="min-w-0 flex-1 py-2.5 pl-4 text-left"
+                >
+                  <span className="block truncate text-sm font-medium text-foreground">
+                    {conv.title}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {new Date(conv.updatedAt).toLocaleString()}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Delete chat"
+                  onClick={(e) => removeConversation(conv.id, e)}
+                  className="mr-2 shrink-0 rounded p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </aside>
       )}
 
-      <CardContent ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto py-4">
-        {turns.length === 0 && (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Ask a capital-allocation question. The copilot queries the real Abu Dhabi datasets and
-              cites its sources.
-            </p>
-            <div className="flex flex-col gap-2">
-              {SUGGESTED.map((q) => (
-                <button
-                  key={q}
-                  type="button"
-                  onClick={() => ask(q)}
-                  className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted"
-                >
-                  {q}
-                </button>
-              ))}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-center justify-between gap-2 border-b border-border bg-background/85 px-5 py-3 backdrop-blur-md sm:px-8">
+          <div className="flex items-center gap-2">
+            <AssistantAvatar className="size-9" />
+            <div>
+              <p className="text-sm font-bold tracking-tight text-foreground">Assistant</p>
+              <p className="hidden text-xs text-muted-foreground sm:block">
+                Queries parcels, transactions, investors & communities, with live charts
+              </p>
             </div>
           </div>
-        )}
-
-        {turns.map((turn, i) => (
-          <div
-            key={`${turn.role}-${i}`}
-            className={cn('flex', turn.role === 'user' ? 'justify-end' : 'justify-start')}
-          >
-            <div
-              className={cn(
-                'max-w-[88%] rounded-2xl px-4 py-2.5',
-                turn.role === 'user'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'border border-border bg-card',
-              )}
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant={showHistory ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShowHistory((v) => !v)}
+              aria-label="Chat history"
             >
-              {turn.role === 'user' ? (
-                <p className="text-sm">{turn.text}</p>
-              ) : (
-                <>
-                  <Markdown content={turn.text} />
-                  {turn.sources && turn.sources.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border pt-2">
-                      {turn.sources.map((s, si) => (
-                        <Badge key={`${s.name}-${si}`} variant="secondary" className="font-mono text-[10px]">
-                          {s.name}
-                        </Badge>
-                      ))}
-                    </div>
+              <History className="size-4" />
+              <span className="hidden sm:inline">History</span>
+              {history.length > 0 && <Badge variant="secondary">{history.length}</Badge>}
+            </Button>
+            <Button variant="outline" size="sm" onClick={newChat} aria-label="New chat">
+              <Plus className="size-4" />
+              <span className="hidden sm:inline">New</span>
+            </Button>
+          </div>
+        </div>
+
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-8">
+          <div className="mx-auto w-full max-w-3xl space-y-4">
+            {turns.length === 0 && (
+              <div className="space-y-4 pt-6">
+                <div className="text-center">
+                  <AssistantAvatar className="mx-auto mb-3 size-14" />
+                  <h2 className="text-lg font-bold tracking-tight text-foreground">
+                    Ask anything about the Abu Dhabi market
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Cross-dataset answers with cited sources and dynamic charts.
+                  </p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {SUGGESTED.map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => ask(q)}
+                      className="rounded-xl border border-border bg-card px-4 py-3 text-left text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {turns.map((turn, i) => (
+              <div
+                key={`${turn.role}-${i}`}
+                className={cn(
+                  'flex gap-2.5',
+                  turn.role === 'user' ? 'justify-end' : 'justify-start',
+                )}
+              >
+                {turn.role === 'assistant' && <AssistantAvatar className="mt-0.5 size-8" />}
+                <div
+                  className={cn(
+                    'rounded-2xl px-4 py-2.5',
+                    turn.role === 'user'
+                      ? 'max-w-[88%] bg-primary text-primary-foreground'
+                      : 'min-w-0 flex-1 border border-border bg-card',
                   )}
-                </>
-              )}
-            </div>
-          </div>
-        ))}
+                >
+                  {turn.role === 'user' ? (
+                    <p className="text-sm">{turn.text}</p>
+                  ) : (
+                    <>
+                      <Markdown content={turn.text} />
+                      {turn.sources && turn.sources.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border pt-2">
+                          {turn.sources.map((s, si) => (
+                            <Badge
+                              key={`${s.name}-${si}`}
+                              variant="secondary"
+                              className="font-mono text-[10px]"
+                            >
+                              {s.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
 
-        {loading && (
-          <div className="flex justify-start">
-            <div className="rounded-2xl border border-border bg-card px-4 py-2.5 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-2">
-                <Sparkles className="size-4 animate-pulse text-primary" />
-                Querying datasets…
-              </span>
-            </div>
+            {loading && (
+              <div className="flex justify-start gap-2.5">
+                <AssistantAvatar className="mt-0.5 size-8" />
+                <div className="rounded-2xl border border-border bg-card px-4 py-2.5 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-2">
+                    <Sparkles className="size-4 animate-pulse text-primary" />
+                    Fetching across datasets…
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </CardContent>
+        </div>
 
-      <div className="border-t border-border p-3">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            ask(input);
-          }}
-          className="flex items-center gap-2"
-        >
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask the copilot…"
-            disabled={loading}
-          />
-          <Button type="submit" size="icon" disabled={loading || !input.trim()}>
-            <Send className="size-4" />
-          </Button>
-        </form>
+        <div className="border-t border-border bg-background/85 px-4 py-3 backdrop-blur-md sm:px-8">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              ask(input);
+            }}
+            className="mx-auto flex w-full max-w-3xl items-center gap-2"
+          >
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask the assistant… e.g. chart price momentum by district"
+              disabled={loading}
+            />
+            <Button type="submit" size="icon" disabled={loading || !input.trim()}>
+              <Send className="size-4" />
+            </Button>
+          </form>
+        </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -1332,7 +1399,7 @@ function ProfilePage({
           <CardHeader>
             <CardTitle className="text-base">Your investing profile</CardTitle>
             <p className="text-sm text-muted-foreground">
-              We use this to personalize matches, recommendations, and the copilot.
+              We use this to personalize matches, recommendations, and the assistant.
             </p>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -1467,7 +1534,7 @@ function ProfilePage({
                   <p className="mb-1 text-xs font-semibold text-muted-foreground">Target sectors</p>
                   <p className="mb-2 text-xs text-muted-foreground">
                     Asset classes you invest in. Drives the sector-fit component of parcel matching and
-                    the copilot's recommendations.
+                    the assistant's recommendations.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {SECTORS.map((s) => (
@@ -1532,12 +1599,12 @@ function ProfilePage({
                   {saved ? <Check className="size-4" /> : null}
                   {saving ? 'Saving…' : saved ? 'Saved' : 'Save profile'}
                 </Button>
-                <Button variant="ghost" onClick={() => onNavigate('Copilot')}>
-                  Ask the copilot with this profile
+                <Button variant="ghost" onClick={() => onNavigate('Assistant')}>
+                  Ask the assistant with this profile
                 </Button>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Saving stores your profile and feeds it to the Decision Copilot as base context, so its
+                Saving stores your profile and feeds it to the assistant as base context, so its
                 answers respect your budget, sectors, commute and amenities.
               </p>
             </div>
@@ -2422,29 +2489,29 @@ function Dashboard() {
           </div>
         </header>
 
-        <main className="flex-1 space-y-6 px-5 py-6 sm:px-8">
-          {tab === 'Overview' && <OverviewPage data={data} onNavigate={setTab} />}
+        {tab === 'Copilot' ? (
+          <main className="flex min-h-0 flex-1 flex-col">
+            <Copilot />
+          </main>
+        ) : (
+          <main className="flex-1 space-y-6 px-5 py-6 sm:px-8">
+            {tab === 'Overview' && <OverviewPage data={data} onNavigate={setTab} />}
 
-          {tab === 'Profile' && <ProfilePage facets={facets} onNavigate={setTab} />}
+            {tab === 'Profile' && <ProfilePage facets={facets} onNavigate={setTab} />}
 
-          {tab === 'Best Match' && <BestMatchPage facets={facets} />}
+            {tab === 'Best Match' && <BestMatchPage facets={facets} />}
 
-          {tab === 'Copilot' && (
-            <div className="mx-auto max-w-3xl">
-              <Copilot />
-            </div>
-          )}
+            {tab === 'Opportunities' && (
+              <CapitalAllocator investors={investors} facets={facets} />
+            )}
 
-          {tab === 'Opportunities' && (
-            <CapitalAllocator investors={investors} facets={facets} />
-          )}
+            {tab === 'Explore' && <Explorer facets={facets} />}
 
-          {tab === 'Explore' && <Explorer facets={facets} />}
+            {tab === 'Market' && <MarketTable data={data} />}
 
-          {tab === 'Market' && <MarketTable data={data} />}
-
-          {tab === 'Investors' && <InvestorsTable investors={investors} />}
-        </main>
+            {tab === 'Investors' && <InvestorsTable investors={investors} />}
+          </main>
+        )}
       </div>
     </div>
   );
