@@ -118,8 +118,8 @@ const SHOWCASE: {
     body: (
       <>
         They scan brokers, portals, and off-market channels around the clock, then{' '}
-        <strong className="font-semibold text-(--ink)">triage exactly what fits your mandate</strong>{' '}
-        — coordinating with each other and looping you in only when judgment is needed.
+        <strong className="font-semibold text-(--ink)">triage exactly what fits your mandate</strong>
+        , coordinating with each other and looping you in only when judgment is needed.
       </>
     ),
     bestFor:
@@ -127,7 +127,7 @@ const SHOWCASE: {
     cta: 'See sourcing',
   },
   {
-    titlePlain: 'Underwrite in minutes, not weeks —',
+    titlePlain: 'Underwrite in minutes, not weeks,',
     titleAccent: 'kept live as the world moves',
     mockup: 'underwriting',
     bubble: 'Re-ran IRR',
@@ -135,7 +135,7 @@ const SHOWCASE: {
     body: (
       <>
         A deal unfolds across dozens of decision points. The runtime reacts as prices change, comps
-        shift, and <strong className="font-semibold text-(--ink)">interest rates move</strong> —
+        shift, and <strong className="font-semibold text-(--ink)">interest rates move</strong>,
         re-running valuation models and pushing every deal forward.
       </>
     ),
@@ -165,7 +165,7 @@ const SHOWCASE: {
 const FAQS = [
   {
     q: 'How much does it cost to get started?',
-    a: 'AcreOS is usage-based — you only pay for the agent work that moves your deals forward. There are no per-seat fees, so your whole team can collaborate, and pricing scales with the size of your portfolio.',
+    a: 'AcreOS is usage-based: you only pay for the agent work that moves your deals forward. There are no per-seat fees, so your whole team can collaborate, and pricing scales with the size of your portfolio.',
   },
   {
     q: 'How fast can agents start sourcing deals?',
@@ -181,7 +181,7 @@ const FAQS = [
   },
   {
     q: 'How is AcreOS different from a traditional CRM?',
-    a: 'A CRM stores data and waits. AcreOS is a runtime — agents actively re-run diligence as prices move, comps shift, and rates change, pushing every deal forward end to end.',
+    a: 'A CRM stores data and waits. AcreOS is a runtime: agents actively re-run diligence as prices move, comps shift, and rates change, pushing every deal forward end to end.',
   },
   {
     q: 'Do I really need this before I have a portfolio?',
@@ -189,7 +189,7 @@ const FAQS = [
   },
   {
     q: 'What happens when an agent needs sign-off?',
-    a: 'Agents drive the work but never act blindly. When a decision needs your judgment — a price, an LOI, a financing term — they surface a clear, reviewable interface and pause for approval.',
+    a: 'Agents drive the work but never act blindly. When a decision needs your judgment (a price, an LOI, a financing term), they surface a clear, reviewable interface and pause for approval.',
   },
 ];
 
@@ -430,7 +430,7 @@ function ProductShowcase({
           </div>
           <span className="showcase-bubble">{bubble}</span>
           <img
-            src="/corgi-hero.png"
+            src="/agent-mascot.png"
             alt=""
             aria-hidden="true"
             className="showcase-mascot"
@@ -513,7 +513,7 @@ function Faq() {
 function App() {
   return (
     <main className="relative">
-      {/* hero — full-bleed Saadiyat Island beachfront */}
+      {/* hero - full-bleed Saadiyat Island beachfront */}
       <section className="hero-full -mt-px flex min-h-160 items-center lg:min-h-195">
         <img
           src="/saadiyat-beachfront.webp"
@@ -527,7 +527,7 @@ function App() {
           <div className="rise-in max-w-2xl">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
               <span className="size-1.5 rounded-full bg-(--brand)" />
-              Announcing our $100M raise — Series A
+              Announcing our $100M Series A raise
             </span>
 
             <h1 className="display-title mt-6 text-5xl leading-[1.02] font-extrabold tracking-tight text-white sm:text-6xl xl:text-7xl">
@@ -536,7 +536,7 @@ function App() {
 
             <p className="mt-6 max-w-xl text-lg text-white/85">
               AcreOS is an AI-native platform where agents carry sourcing, diligence, execution, and
-              portfolio management — so you focus on judgment, relationships, and capital allocation.
+              portfolio management, so you focus on judgment, relationships, and capital allocation.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -661,7 +661,7 @@ function App() {
         </div>
       </section>
 
-      {/* manifesto — visual story rows */}
+      {/* manifesto - product showcase rows */}
       <section id="manifesto" className="page-wrap px-4 py-24">
         <div className="mx-auto max-w-2xl text-center">
           <p className="island-kicker mb-3">Our mission</p>
@@ -669,7 +669,7 @@ function App() {
             We&rsquo;re rebuilding property investment with AI
           </h2>
           <p className="mt-4 text-lg text-(--ink-soft)">
-            Real estate is one of the world&rsquo;s largest asset classes — yet sourced across
+            Real estate is one of the world&rsquo;s largest asset classes, yet sourced across
             brokers, portals, PDFs, and half-broken CRMs. We&rsquo;re making it dramatically better.
           </p>
         </div>
