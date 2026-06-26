@@ -27,6 +27,7 @@ import {
 } from '@/server/data/recommend';
 import {
   capitalSupplyBySector,
+  districtMarketPoints,
   exploreParcels,
   listInvestors,
   parcelFacets,
@@ -97,10 +98,11 @@ app.openapi(chatRoute, async (c) => {
 app.get('/intel/summary', (c) => {
   return c.json({
     summary: portfolioSummary(),
-    priceTrends: priceTrendByDistrict(8),
+    priceTrends: priceTrendByDistrict(20),
+    districts: districtMarketPoints(),
     topVacant: topVacantParcels(6),
     capitalSupply: capitalSupplyBySector(6),
-    serviceDemand: serviceDemandByDistrict(5),
+    serviceDemand: serviceDemandByDistrict(10),
   });
 });
 

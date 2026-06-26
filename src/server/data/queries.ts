@@ -281,6 +281,45 @@ export function transactionBreakdown(district?: string): TxnBreakdownRow[] {
     .sort((a, b) => b.count - a.count);
 }
 
+export type DistrictMarketPoint = {
+  district: string;
+  latitude: number;
+  longitude: number;
+  baseSaleAedSqm: number;
+  grossYieldPct: number;
+  infrastructureScore: number;
+  areaType: string;
+  profile: string;
+  avgPricePerSqm: number;
+  momentumPct: number;
+  txnCount: number;
+};
+
+/** Districts enriched with transaction-derived price and momentum for maps/charts. */
+export function districtMarketPoints(): DistrictMarketPoint[] {
+  const { districts } = getDataStore();
+  const trends = new Map(priceTrendByDistrict(50).map((t) => [t.district, t]));
+
+  return districts
+    .map((d) => {
+      const trend = trends.get(d.district);
+      return {
+        district: d.district,
+        latitude: d.latitude,
+        longitude: d.longitude,
+        baseSaleAedSqm: d.base_sale_aed_sqm,
+        grossYieldPct: d.gross_yield_pct,
+        infrastructureScore: d.infrastructure_score,
+        areaType: d.area_type,
+        profile: d.profile,
+        avgPricePerSqm: trend?.avgPricePerSqm ?? d.base_sale_aed_sqm,
+        momentumPct: trend?.momentumPct ?? 0,
+        txnCount: trend?.txnCount ?? 0,
+      };
+    })
+    .sort((a, b) => b.avgPricePerSqm - a.avgPricePerSqm);
+}
+
 export function listDistricts() {
   return getDataStore().districts;
 }

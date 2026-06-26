@@ -34,6 +34,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MarketDashboard } from '@/components/market/MarketDashboard';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/auth-client';
 import { Markdown } from '@/lib/markdown';
@@ -391,6 +392,19 @@ type Summary = {
     avgPricePerSqm: number;
     txnCount: number;
     momentumPct: number;
+  }>;
+  districts?: Array<{
+    district: string;
+    latitude: number;
+    longitude: number;
+    baseSaleAedSqm: number;
+    grossYieldPct: number;
+    infrastructureScore: number;
+    areaType: string;
+    profile: string;
+    avgPricePerSqm: number;
+    momentumPct: number;
+    txnCount: number;
   }>;
   topVacant: Array<{
     parcel_id: string;
@@ -3099,65 +3113,6 @@ function PortfolioPage({
   );
 }
 
-function MarketTable({ data }: { data: Summary | null }) {
-  return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0">
-        <div>
-          <CardTitle className="text-base">District price momentum</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Recent vs prior 6-month price/sqm, from transactions
-          </p>
-        </div>
-      </CardHeader>
-      <CardContent className="px-0 pb-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-y border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
-                <th className="px-6 py-3 font-semibold">District</th>
-                <th className="p-3 text-right font-semibold">Avg AED/sqm</th>
-                <th className="p-3 text-right font-semibold">Txns</th>
-                <th className="px-6 py-3 text-right font-semibold">Momentum</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data?.priceTrends ?? []).map((t) => (
-                <tr
-                  key={t.district}
-                  className="border-b border-border/70 last:border-0 hover:bg-muted/50"
-                >
-                  <td className="px-6 py-3 font-semibold text-foreground">{t.district}</td>
-                  <td className="p-3 text-right text-foreground">{AED.format(t.avgPricePerSqm)}</td>
-                  <td className="p-3 text-right text-muted-foreground">{t.txnCount}</td>
-                  <td className="px-6 py-3 text-right">
-                    <span
-                      className={cn(
-                        'inline-flex items-center gap-1 font-semibold',
-                        t.momentumPct >= 0 ? 'text-emerald-700' : 'text-destructive',
-                      )}
-                    >
-                      <ArrowUpRight className={cn('size-3.5', t.momentumPct < 0 && 'rotate-90')} />
-                      {t.momentumPct >= 0 ? '+' : ''}
-                      {t.momentumPct}%
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {!data && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
-                    Loading district data…
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 function InvestorsTable({ investors }: { investors: Investor[] }) {
   return (
@@ -3372,7 +3327,7 @@ function Dashboard() {
 
             {tab === 'Explore' && <Explorer facets={facets} />}
 
-            {tab === 'Market' && <MarketTable data={data} />}
+            {tab === 'Market' && <MarketDashboard data={data} />}
 
             {tab === 'Investors' && <InvestorsTable investors={investors} />}
           </main>

@@ -1,5 +1,7 @@
 import { useId } from 'react';
 
+import { cn } from '@/lib/utils';
+
 export type ChartType = 'bar' | 'hbar' | 'line' | 'area' | 'pie' | 'donut';
 
 export type ChartPoint = { label: string; value: number };
@@ -333,11 +335,11 @@ function PieChart({
   );
 }
 
-export function Chart({ spec }: { spec: ChartSpec }) {
+export function Chart({ spec, className }: { spec: ChartSpec; className?: string }) {
   const { type, title, unit, data } = spec;
 
   return (
-    <figure className="my-3 rounded-xl border border-border bg-card p-4">
+    <figure className={cn('my-3 rounded-xl border border-border bg-card p-4', className)}>
       {title && (
         <figcaption className="mb-3 text-sm font-semibold tracking-tight text-foreground">
           {title}
