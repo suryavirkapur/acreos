@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { ArrowRight } from 'lucide-react';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,9 +14,14 @@ export const Route = createFileRoute('/login')({
 
 function Login() {
   const navigate = useNavigate();
+  const { data: session, isPending } = authClient.useSession();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isPending && session) navigate({ to: '/dashboard', replace: true });
+  }, [isPending, session, navigate]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();

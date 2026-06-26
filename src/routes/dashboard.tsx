@@ -36,6 +36,23 @@ import { Markdown } from '@/lib/markdown';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/dashboard')({
+  head: () => ({
+    meta: [
+      {
+        title: 'Dashboard | AcreOS',
+      },
+      {
+        name: 'description',
+        content: 'AcreOS dashboard for property investment intelligence.',
+      },
+    ],
+    links: [
+      {
+        rel: 'canonical',
+        href: '/dashboard',
+      },
+    ],
+  }),
   component: Dashboard,
 });
 

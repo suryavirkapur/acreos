@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { ArrowRight } from 'lucide-react';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,10 @@ function Verify() {
   const [resent, setResent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!email) navigate({ to: '/login', replace: true });
+  }, [email, navigate]);
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
@@ -33,7 +37,7 @@ function Verify() {
       setError(result.error.message ?? 'That code did not work. Try again.');
       return;
     }
-    navigate({ to: '/dashboard' });
+    navigate({ to: '/dashboard', replace: true });
   }
 
   async function resend() {

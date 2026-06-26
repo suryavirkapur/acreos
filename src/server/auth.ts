@@ -6,6 +6,8 @@ import { getDb } from '@/server/db';
 import { sendOtpEmail } from '@/server/email';
 import { getEnv } from '@/server/env';
 
+const THREE_HOURS_SECONDS = 60 * 60 * 3;
+
 function createAuth() {
   const env = getEnv();
 
@@ -13,6 +15,11 @@ function createAuth() {
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
     database: prismaAdapter(getDb(), { provider: 'postgresql' }),
+    session: {
+      expiresIn: THREE_HOURS_SECONDS,
+      updateAge: 60 * 30,
+      freshAge: THREE_HOURS_SECONDS,
+    },
     trustedOrigins: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3199'],
     emailAndPassword: { enabled: false },
     plugins: [
