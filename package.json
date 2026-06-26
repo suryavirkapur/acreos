@@ -18,6 +18,7 @@
     "data:seed": "tsx scripts/seed-data.ts",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
+    "test:copilot": "tsx src/server/data/copilot-profile.test.ts",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"
   },
