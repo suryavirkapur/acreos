@@ -10,9 +10,12 @@ import {
   LineChart,
   Radar,
   Sparkles,
+  TrendingDown,
   Waves,
 } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
+
+import { HOMEPAGE_PRICE_DROPS } from '@/lib/price-drops';
 
 export const Route = createFileRoute('/')({
   ssr: true,
@@ -33,7 +36,7 @@ function CursorLogo({ className }: { className?: string }) {
 }
 
 const INVESTORS: { name: string; logo: 'evoss' | 'cursor' }[] = [
-  { name: 'EVoss', logo: 'evoss' },
+  { name: 'eVoost AI', logo: 'evoss' },
   { name: 'Cursor', logo: 'cursor' },
 ];
 
@@ -98,6 +101,24 @@ const MOCK_DEALS = [
     value: 'AED 268.8M',
   },
 ];
+
+const AED = new Intl.NumberFormat('en-AE', {
+  maximumFractionDigits: 0,
+  notation: 'compact',
+});
+
+function formatAed(value: number): string {
+  return `AED ${AED.format(value)}`;
+}
+
+function compactArea(area: string): string {
+  return area
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(', ');
+}
 
 const SHOWCASE: {
   titlePlain: string;
@@ -254,6 +275,135 @@ function ProductPreview() {
         </span>
       </div>
     </div>
+  );
+}
+
+function PriceDropsSection() {
+  const featured = HOMEPAGE_PRICE_DROPS[0];
+  const remaining = HOMEPAGE_PRICE_DROPS.slice(1, 7);
+
+  if (!featured) return null;
+
+  return (
+    <section className="page-wrap px-4 py-20">
+      <div className="grid gap-10 lg:grid-cols-[0.9fr_1.35fr] lg:items-end">
+        <div>
+          <p className="island-kicker mb-3">Live price drops</p>
+          <h2 className="font-serif text-4xl leading-tight font-semibold tracking-tight text-(--ink) sm:text-5xl">
+            Fresh discounts across Dubai properties
+          </h2>
+          <p className="mt-4 text-lg/8 text-(--ink-soft)">
+            AcreOS tracks repriced listings and surfaces the sharpest cuts, so agents can move
+            quickly when sellers create a better entry point.
+          </p>
+          <div className="mt-7 grid grid-cols-3 gap-px overflow-hidden rounded-2xl border border-(--line) bg-(--line)">
+            {[
+              ['Listings watched', '27K+'],
+              ['Largest drop', `${featured.largestTotalDropPercent.toFixed(1)}%`],
+              ['Top cut', formatAed(featured.largestTotalDrop)],
+            ].map(([label, value]) => (
+              <div key={label} className="bg-(--card) p-4">
+                <p className="text-[0.64rem] font-bold tracking-wide text-(--ink-faint) uppercase">
+                  {label}
+                </p>
+                <p className="mt-1 text-lg font-extrabold text-(--ink)">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
+          <a
+            href={featured.propertyfinderLink}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`View ${featured.title} price drop on Property Finder`}
+            className="group island-shell overflow-hidden bg-(--card)"
+          >
+            <div className="relative aspect-[1.45] overflow-hidden bg-(--paper-soft)">
+              <img
+                src={featured.imageUrl}
+                alt=""
+                className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                loading="lazy"
+              />
+              <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-xs font-extrabold text-red-700 shadow-sm backdrop-blur">
+                <TrendingDown className="size-3.5" />
+                {featured.largestTotalDropPercent.toFixed(1)}% drop
+              </span>
+            </div>
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-extrabold text-(--ink)">{featured.title}</p>
+                  <p className="mt-1 truncate text-xs text-(--ink-soft)">
+                    {compactArea(featured.area)}
+                  </p>
+                </div>
+                <ArrowUpRight className="size-4 shrink-0 text-(--brand)" />
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <p className="text-[0.65rem] font-bold tracking-wide text-(--ink-faint) uppercase">
+                    Now
+                  </p>
+                  <p className="font-extrabold text-(--ink)">{formatAed(featured.currentPrice)}</p>
+                </div>
+                <div>
+                  <p className="text-[0.65rem] font-bold tracking-wide text-(--ink-faint) uppercase">
+                    Discount
+                  </p>
+                  <p className="font-extrabold text-red-700">
+                    {formatAed(featured.largestTotalDrop)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </a>
+
+          <div className="grid gap-3">
+            {remaining.map((listing) => (
+              <a
+                key={listing.propertyFinderId}
+                href={listing.propertyfinderLink}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`View ${listing.title} price drop on Property Finder`}
+                className="group rounded-2xl border border-(--line) bg-(--card) p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-(--line-strong)"
+              >
+                <div className="flex gap-3">
+                  <img
+                    src={listing.imageUrl}
+                    alt=""
+                    className="h-18 w-22 shrink-0 rounded-xl object-cover"
+                    loading="lazy"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="line-clamp-1 text-sm font-bold text-(--ink)">{listing.title}</p>
+                      <span className="shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-[0.65rem] font-extrabold text-red-700">
+                        -{listing.largestTotalDropPercent.toFixed(1)}%
+                      </span>
+                    </div>
+                    <p className="mt-1 line-clamp-1 text-xs text-(--ink-soft)">
+                      {compactArea(listing.area)}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+                      <span className="font-extrabold text-(--ink)">
+                        {formatAed(listing.currentPrice)}
+                      </span>
+                      <span className="font-bold text-red-700">
+                        {formatAed(listing.largestTotalDrop)} cut
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -606,6 +756,8 @@ function App() {
           <ProductPreview />
         </div>
       </div>
+
+      <PriceDropsSection />
 
       {/* flow */}
       <section id="how-it-works" className="page-wrap px-4 py-20">

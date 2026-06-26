@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "rsbuild",
-    "build": "pnpm data:generate && rsbuild build",
+    "build": "pnpm data:generate && pnpm price-drops:generate && rsbuild build",
     "preview": "rsbuild preview",
     "start": "srvx --prod -s ../client dist/server/index.js",
     "postinstall": "prisma generate",
@@ -16,6 +16,8 @@
     "db:studio": "prisma studio",
     "data:generate": "tsx scripts/generate-data-store.ts",
     "data:seed": "tsx scripts/seed-data.ts",
+    "price-drops:generate": "tsx scripts/generate-price-drops.ts",
+    "price-drops:seed": "tsx scripts/seed-price-drops.ts",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "fmt": "oxfmt",

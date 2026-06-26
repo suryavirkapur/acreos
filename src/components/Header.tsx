@@ -70,7 +70,13 @@ function PlatformDropdown() {
       {open && (
         <div className="nav-menu rise-in w-[19rem]" role="menu">
           {PLATFORM.map((item) => (
-            <a key={item.label} href="#platform" role="menuitem" onClick={() => setOpen(false)}>
+            <a
+              key={item.label}
+              href="#platform"
+              role="menuitem"
+              aria-label={item.label}
+              onClick={() => setOpen(false)}
+            >
               <span className="nav-menu-icon">
                 <item.icon className="size-[1.05rem]" />
               </span>
