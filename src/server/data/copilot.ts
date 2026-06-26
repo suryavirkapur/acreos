@@ -155,9 +155,7 @@ export async function runCopilot(
   }
 
   const model = getOpenAiModel();
-  const system = profileContext
-    ? `${SYSTEM_PROMPT}\n\nThe user's investor profile (tailor answers to it): ${profileContext}`
-    : SYSTEM_PROMPT;
+  const system = profileContext ? `${SYSTEM_PROMPT}\n\n${profileContext}` : SYSTEM_PROMPT;
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: 'system', content: system },
     { role: 'user', content: question },

@@ -17,6 +17,7 @@ import { getProfile, upsertProfile } from '@/server/data/profile';
 import {
   AMENITY_CATEGORIES,
   amenityDensityByDistrict,
+  formatProfileForCopilot,
   type ProfileInput,
   recommendDistricts,
 } from '@/server/data/recommend';
@@ -151,7 +152,9 @@ app.post('/intel/copilot', async (c) => {
   let profileContext: string | undefined;
   if (userId) {
     const profile = await getProfile(userId).catch(() => null);
-    if (profile) profileContext = JSON.stringify(profile);
+    if (profile) {
+      profileContext = formatProfileForCopilot(profile, recommendDistricts(profile, 5));
+    }
   }
 
   const result = await runCopilot(question, profileContext);

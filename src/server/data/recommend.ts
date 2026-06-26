@@ -152,3 +152,49 @@ export function recommendDistricts(profile: ProfileInput, limit = 6): DistrictRe
 
   return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
+
+const AED_FMT = new Intl.NumberFormat('en-AE', { maximumFractionDigits: 0 });
+
+/** Renders the saved profile + its recommendations as readable copilot base info. */
+export function formatProfileForCopilot(
+  profile: ProfileInput,
+  recommendations: DistrictRecommendation[],
+): string {
+  const lines: string[] = [
+    'USER PROFILE — treat this as base information about the person you are advising:',
+    `- Investor type: ${profile.investorType}`,
+  ];
+
+  if (profile.investorType === 'retail') {
+    if (profile.budgetAed) lines.push(`- Budget: AED ${AED_FMT.format(profile.budgetAed)}`);
+    if (profile.workplaceDistrict)
+      lines.push(`- Workplace district: ${profile.workplaceDistrict} (optimize for commute)`);
+    if (profile.mustHaveAmenities?.length)
+      lines.push(`- Must-have amenities nearby: ${profile.mustHaveAmenities.join(', ')}`);
+  } else {
+    if (profile.capitalRange) lines.push(`- Capital range: AED ${profile.capitalRange}`);
+    if (profile.preferredSectors?.length)
+      lines.push(`- Target sectors: ${profile.preferredSectors.join(', ')}`);
+  }
+  if (profile.riskProfile) lines.push(`- Risk profile: ${profile.riskProfile}`);
+  if (profile.horizon) lines.push(`- Investment horizon: ${profile.horizon}`);
+  if (profile.preferredDistricts?.length)
+    lines.push(`- Preferred districts: ${profile.preferredDistricts.join(', ')}`);
+
+  if (recommendations.length > 0) {
+    lines.push('', 'Districts our engine already recommends for this user:');
+    recommendations.slice(0, 5).forEach((r, i) => {
+      lines.push(
+        `${i + 1}. ${r.district} (fit ${r.score}/100, ~AED ${AED_FMT.format(r.estUnitPriceAed)} typical unit, ${r.grossYieldPct}% yield) — ${r.reasons.join(', ')}`,
+      );
+    });
+  }
+
+  lines.push(
+    '',
+    'Personalize every answer to this profile: respect the budget/capital, prefer the ' +
+      'recommended districts when relevant, and weigh commute and must-have amenities for retail users.',
+  );
+
+  return lines.join('\n');
+}
