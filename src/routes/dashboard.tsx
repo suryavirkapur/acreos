@@ -1268,7 +1268,11 @@ function ProfilePage({
           </CardHeader>
           <CardContent className="space-y-5">
             <div>
-              <p className="mb-2 text-xs font-semibold text-muted-foreground">I am a…</p>
+              <p className="mb-1 text-xs font-semibold text-muted-foreground">I am a…</p>
+              <p className="mb-2 text-xs text-muted-foreground">
+                Sets which questions we ask and how districts are scored — retail optimizes for a
+                place to live, institutional for returns.
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 {(['retail', 'institutional'] as const).map((type) => (
                   <button
@@ -1302,41 +1306,57 @@ function ProfilePage({
 
             {isRetail ? (
               <>
-                <label htmlFor="pf-budget" className="block text-xs font-semibold text-muted-foreground">
-                  Budget (AED)
-                  <Input
-                    id="pf-budget"
-                    type="number"
-                    value={profile.budgetAed ?? ''}
-                    placeholder="2,000,000"
-                    min={0}
-                    step={50000}
-                    onChange={(e) => update({ budgetAed: Number(e.target.value) || undefined })}
-                    className="mt-1 max-w-xs"
-                  />
-                </label>
-
-                <label className="block text-xs font-semibold text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Briefcase className="size-3.5" /> Workplace district (for commute)
-                  </span>
-                  <select
-                    value={profile.workplaceDistrict ?? ''}
-                    onChange={(e) => update({ workplaceDistrict: e.target.value || undefined })}
-                    className="mt-1 h-9 w-full max-w-xs rounded-md border border-border bg-background px-3 text-sm text-foreground"
-                  >
-                    <option value="">Select district</option>
-                    {districts.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div>
+                  <label htmlFor="pf-budget" className="block text-xs font-semibold text-muted-foreground">
+                    Budget (AED)
+                    <Input
+                      id="pf-budget"
+                      type="number"
+                      value={profile.budgetAed ?? ''}
+                      placeholder="2,000,000"
+                      min={0}
+                      step={50000}
+                      onChange={(e) => update({ budgetAed: Number(e.target.value) || undefined })}
+                      className="mt-1 max-w-xs"
+                    />
+                  </label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Your total purchase budget. Districts where a typical unit fits this score higher,
+                    and it prefills the downpayment calculator below.
+                  </p>
+                </div>
 
                 <div>
-                  <p className="mb-2 text-xs font-semibold text-muted-foreground">
+                  <label className="block text-xs font-semibold text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Briefcase className="size-3.5" /> Workplace district (for commute)
+                    </span>
+                    <select
+                      value={profile.workplaceDistrict ?? ''}
+                      onChange={(e) => update({ workplaceDistrict: e.target.value || undefined })}
+                      className="mt-1 h-9 w-full max-w-xs rounded-md border border-border bg-background px-3 text-sm text-foreground"
+                    >
+                      <option value="">Select district</option>
+                      {districts.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    We measure straight-line distance from here to each district's centroid and reward
+                    shorter commutes.
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-1 text-xs font-semibold text-muted-foreground">
                     Must-have amenities nearby
+                  </p>
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    We count real amenities (schools, clinics, transit, retail…) per district from
+                    OpenStreetMap and score how well each district covers the categories you pick.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {AMENITY_CATEGORIES.map((cat) => (
@@ -1352,24 +1372,34 @@ function ProfilePage({
               </>
             ) : (
               <>
-                <label className="block text-xs font-semibold text-muted-foreground">
-                  Capital range (AED)
-                  <select
-                    value={profile.capitalRange ?? ''}
-                    onChange={(e) => update({ capitalRange: e.target.value || undefined })}
-                    className="mt-1 h-9 w-full max-w-xs rounded-md border border-border bg-background px-3 text-sm text-foreground"
-                  >
-                    <option value="">Select band</option>
-                    {CAPITAL_BANDS.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground">
+                    Capital range (AED)
+                    <select
+                      value={profile.capitalRange ?? ''}
+                      onChange={(e) => update({ capitalRange: e.target.value || undefined })}
+                      className="mt-1 h-9 w-full max-w-xs rounded-md border border-border bg-background px-3 text-sm text-foreground"
+                    >
+                      <option value="">Select band</option>
+                      {CAPITAL_BANDS.map((b) => (
+                        <option key={b} value={b}>
+                          {b}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    The capital you can deploy per deal. In Opportunities, parcels above this band are
+                    screened out of matches.
+                  </p>
+                </div>
 
                 <div>
-                  <p className="mb-2 text-xs font-semibold text-muted-foreground">Target sectors</p>
+                  <p className="mb-1 text-xs font-semibold text-muted-foreground">Target sectors</p>
+                  <p className="mb-2 text-xs text-muted-foreground">
+                    Asset classes you invest in. Drives the sector-fit component of parcel matching and
+                    the copilot's recommendations.
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {SECTORS.map((s) => (
                       <Chip
@@ -1385,46 +1415,62 @@ function ProfilePage({
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-xs font-semibold text-muted-foreground">
-                Risk profile
-                <select
-                  value={profile.riskProfile ?? ''}
-                  onChange={(e) => update({ riskProfile: e.target.value || undefined })}
-                  className="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
-                >
-                  <option value="">Select</option>
-                  {RISKS.map((r) => (
-                    <option key={r} value={r}>
-                      {titleCase(r)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block text-xs font-semibold text-muted-foreground">
-                Investment horizon
-                <select
-                  value={profile.horizon ?? ''}
-                  onChange={(e) => update({ horizon: e.target.value || undefined })}
-                  className="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
-                >
-                  <option value="">Select</option>
-                  {HORIZONS.map((h) => (
-                    <option key={h} value={h}>
-                      {titleCase(h)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground">
+                  Risk profile
+                  <select
+                    value={profile.riskProfile ?? ''}
+                    onChange={(e) => update({ riskProfile: e.target.value || undefined })}
+                    className="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
+                  >
+                    <option value="">Select</option>
+                    {RISKS.map((r) => (
+                      <option key={r} value={r}>
+                        {titleCase(r)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Conservative favours developed assets; aggressive rewards vacant land with upside.
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground">
+                  Investment horizon
+                  <select
+                    value={profile.horizon ?? ''}
+                    onChange={(e) => update({ horizon: e.target.value || undefined })}
+                    className="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
+                  >
+                    <option value="">Select</option>
+                    {HORIZONS.map((h) => (
+                      <option key={h} value={h}>
+                        {titleCase(h)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  How long you plan to hold — short (&lt;3y), medium (3–7y), or long (&gt;7y).
+                </p>
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Button onClick={save} disabled={saving}>
-                {saved ? <Check className="size-4" /> : null}
-                {saving ? 'Saving…' : saved ? 'Saved' : 'Save profile'}
-              </Button>
-              <Button variant="ghost" onClick={() => onNavigate('Copilot')}>
-                Ask the copilot with this profile
-              </Button>
+            <div>
+              <div className="flex items-center gap-3">
+                <Button onClick={save} disabled={saving}>
+                  {saved ? <Check className="size-4" /> : null}
+                  {saving ? 'Saving…' : saved ? 'Saved' : 'Save profile'}
+                </Button>
+                <Button variant="ghost" onClick={() => onNavigate('Copilot')}>
+                  Ask the copilot with this profile
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Saving stores your profile and feeds it to the Decision Copilot as base context, so its
+                answers respect your budget, sectors, commute and amenities.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -1437,8 +1483,8 @@ function ProfilePage({
           <CardTitle className="text-base">Recommended for you</CardTitle>
           <p className="text-sm text-muted-foreground">
             {isRetail
-              ? 'Districts by amenities, commute & affordability'
-              : 'Districts by yield, infrastructure & amenities'}
+              ? 'Ranked live as you edit. Score blends amenity fit (40%), commute (35%) and affordability (25%).'
+              : 'Ranked live as you edit. Score blends yield (45%), infrastructure (30%) and amenity fit (25%).'}
           </p>
         </CardHeader>
         <CardContent className="space-y-2.5">
