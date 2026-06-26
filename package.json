@@ -20,6 +20,7 @@
     "price-drops:seed": "tsx scripts/seed-price-drops.ts",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
+    "test:copilot": "tsx src/server/data/copilot-profile.test.ts",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"
   },

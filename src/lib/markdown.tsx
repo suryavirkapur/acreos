@@ -27,6 +27,66 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
   });
 }
 
+function isTableRow(line: string): boolean {
+  const trimmed = line.trim();
+  return trimmed.startsWith('|') && trimmed.endsWith('|');
+}
+
+function isSeparatorRow(line: string): boolean {
+  return /^\|[\s\-:|]+(\|[\s\-:|]+)+\|$/.test(line.trim());
+}
+
+function parseCells(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim());
+}
+
+function renderTable(rows: string[], key: string): ReactNode {
+  if (rows.length === 0) return null;
+
+  const headerCells = parseCells(rows[0]);
+  let bodyStart = 1;
+  if (rows.length > 1 && isSeparatorRow(rows[1])) bodyStart = 2;
+  const bodyRows = rows.slice(bodyStart).map(parseCells);
+
+  return (
+    <div key={key} className="my-3 overflow-x-auto rounded-lg border border-border">
+      <table className="w-full min-w-[280px] text-sm">
+        <thead className="border-b border-border bg-muted/50">
+          <tr>
+            {headerCells.map((cell, i) => (
+              <th
+                key={`${key}-h-${i}`}
+                className="px-3 py-2 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+              >
+                {inline(cell, `${key}-h-${i}`)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {bodyRows.map((cells, rowIndex) => (
+            <tr
+              key={`${key}-r-${rowIndex}`}
+              className="border-b border-border/70 last:border-0 hover:bg-muted/40"
+            >
+              {cells.map((cell, cellIndex) => (
+                <td key={`${key}-r-${rowIndex}-c-${cellIndex}`} className="px-3 py-2 text-foreground">
+                  {inline(cell, `${key}-r-${rowIndex}-c-${cellIndex}`)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function ChartBlock({ json, keyId }: { json: string; keyId: string }) {
   let parsed: unknown;
   try {
@@ -52,6 +112,7 @@ export function Markdown({ content }: { content: string }) {
   const blocks: ReactNode[] = [];
   let bullets: string[] = [];
   let ordered: string[] = [];
+  let tableRows: string[] = [];
 
   function flushBullets() {
     if (bullets.length === 0) return;
@@ -79,9 +140,16 @@ export function Markdown({ content }: { content: string }) {
     ordered = [];
   }
 
+  function flushTable() {
+    if (tableRows.length === 0) return;
+    blocks.push(renderTable(tableRows, `tbl-${blocks.length}`));
+    tableRows = [];
+  }
+
   function flushLists() {
     flushBullets();
     flushOrdered();
+    flushTable();
   }
 
   for (let index = 0; index < lines.length; index++) {
@@ -121,6 +189,14 @@ export function Markdown({ content }: { content: string }) {
       );
       continue;
     }
+
+    if (isTableRow(line)) {
+      flushBullets();
+      flushOrdered();
+      tableRows.push(line);
+      continue;
+    }
+    if (tableRows.length > 0) flushTable();
 
     if (/^#{1,6}\s/.test(line)) {
       flushLists();

@@ -1,5 +1,12 @@
 import type OpenAI from 'openai';
 
+import { matchBestForProfile } from '@/server/data/best-match';
+import {
+  extractProfileFromQuestion,
+  formatBestMatchReply,
+  isPropertyRecommendationQuestion,
+  profileInputFromToolArgs,
+} from '@/server/data/copilot-profile';
 import { matchMandateToParcels } from '@/server/data/matching';
 import {
   capitalSupplyBySector,
@@ -12,7 +19,34 @@ import { getOpenAiClient, getOpenAiModel } from '@/server/openai';
 
 type ToolResult = { data: unknown; source: string };
 
+const BEST_MATCH_SOURCE =
+  'best-match.ts (deterministic scoring over sample_transactions.csv & sample_parcels.csv)';
+
+function runBestMatchTool(args: Record<string, unknown>): ToolResult {
+  const limit =
+    typeof args.limit === 'number' && Number.isFinite(args.limit)
+      ? Math.max(1, Math.min(20, Math.round(args.limit)))
+      : 5;
+  const profile = profileInputFromToolArgs(args);
+  const matches = matchBestForProfile(profile, limit);
+
+  return {
+    data: {
+      profileUsed: profile,
+      matchCount: matches.length,
+      matches,
+      formattedReply: formatBestMatchReply(matches, profile),
+      emptyMessage:
+        matches.length === 0
+          ? 'No exact matches found. Try widening budget, districts, property type, or size requirements.'
+          : undefined,
+    },
+    source: BEST_MATCH_SOURCE,
+  };
+}
+
 const TOOLS: Record<string, (args: Record<string, unknown>) => ToolResult> = {
+  best_match_for_profile: runBestMatchTool,
   price_trend_by_district: (args) => ({
     data: priceTrendByDistrict(typeof args.limit === 'number' ? args.limit : 10),
     source: 'sample_transactions.csv (2023-2026 price/sqm, recent vs prior 6mo momentum)',
@@ -50,7 +84,50 @@ const TOOLS: Record<string, (args: Record<string, unknown>) => ToolResult> = {
   }),
 };
 
+const BEST_MATCH_TOOL_SCHEMA: OpenAI.Chat.Completions.ChatCompletionTool = {
+  type: 'function',
+  function: {
+    name: 'best_match_for_profile',
+    description:
+      'Rank properties and districts for a personal buyer/investor profile using the deterministic Best Match engine. ' +
+      'Use this for natural-language questions about where to live or invest based on workplace, budget, bedrooms, ' +
+      'property type, lifestyle priorities, rental yield, and preferred districts. Returns ranked matches with scores, ' +
+      'reasons, and trade-offs. Do NOT use list_districts or price_trend_by_district instead of this tool for preference-based recommendations.',
+    parameters: {
+      type: 'object',
+      properties: {
+        purpose: { type: 'string', description: 'live | invest | holiday_home | commercial' },
+        workplaceDistrict: { type: 'string', description: 'e.g. ADGM, Al Maryah Island' },
+        budgetMinAed: { type: 'number' },
+        budgetMaxAed: { type: 'number' },
+        propertyType: {
+          type: 'string',
+          description: 'apartment | villa | townhouse | office | retail | warehouse',
+        },
+        bedrooms: { type: 'number' },
+        bathrooms: { type: 'number' },
+        minSizeSqm: { type: 'number' },
+        preferredDistricts: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Hard filter — only return matches in these districts when provided',
+        },
+        lifestylePriorities: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'e.g. commute, restaurants, rental yield, schools, beach',
+        },
+        mustHaveAmenities: { type: 'array', items: { type: 'string' } },
+        riskProfile: { type: 'string', description: 'conservative | balanced | aggressive' },
+        horizon: { type: 'string' },
+        limit: { type: 'number', description: 'max matches to return (default 5)' },
+      },
+    },
+  },
+};
+
 const TOOL_SCHEMAS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
+  BEST_MATCH_TOOL_SCHEMA,
   {
     type: 'function',
     function: {
@@ -98,7 +175,9 @@ const TOOL_SCHEMAS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'list_districts',
-      description: 'Reference data for all districts: base price/sqm, gross yield, infrastructure score.',
+      description:
+        'Reference data for all districts: base price/sqm, gross yield, infrastructure score. ' +
+        'Use for general market overviews, not personal preference matching.',
       parameters: { type: 'object', properties: {} },
     },
   },
@@ -129,6 +208,12 @@ const TOOL_SCHEMAS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
 const SYSTEM_PROMPT = `You are the AcreOS Decision Copilot for UAE real-estate capital allocation.
 Answer questions by calling the provided tools over real Abu Dhabi datasets — never fabricate numbers.
 Call as many tools as needed, then give a crisp, decision-ready answer in markdown.
+
+ROUTING:
+- For personal property recommendation questions (workplace, budget, bedrooms, lifestyle, rental yield),
+  you MUST call best_match_for_profile and return the full formattedReply from the tool result without
+  truncating. Do not substitute list_districts or price_trend_by_district for preference-based questions.
+- For institutional mandate questions (a fund deploying capital), use match_mandate_to_parcels.
 
 VISUALIZE DATA: Whenever your answer compares numbers across districts, sectors, time, or categories,
 embed ONE OR MORE charts using a fenced code block tagged \`chart\`. Build charts ONLY from real
@@ -173,6 +258,21 @@ export async function runCopilot(
   profileContext?: string,
 ): Promise<CopilotResponse> {
   const openai = getOpenAiClient();
+  const model = getOpenAiModel();
+
+  // Deterministic fast-path: preference-based recommendation questions are
+  // answered by the Best Match engine directly, so they work without an API key
+  // and never get truncated by the model.
+  if (isPropertyRecommendationQuestion(question)) {
+    const { profile, limit } = extractProfileFromQuestion(question);
+    const matches = matchBestForProfile(profile, limit);
+    return {
+      reply: formatBestMatchReply(matches, profile),
+      toolsUsed: [{ name: 'best_match_for_profile', source: BEST_MATCH_SOURCE }],
+      model,
+    };
+  }
+
   if (!openai) {
     return {
       reply:
@@ -183,7 +283,6 @@ export async function runCopilot(
     };
   }
 
-  const model = getOpenAiModel();
   const system = profileContext ? `${SYSTEM_PROMPT}\n\n${profileContext}` : SYSTEM_PROMPT;
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: 'system', content: system },
@@ -211,6 +310,8 @@ export async function runCopilot(
       return { reply: choice.content?.trim() ?? 'No answer produced.', toolsUsed, model };
     }
 
+    let bestMatchReply: string | undefined;
+
     for (const call of calls) {
       if (call.type !== 'function') continue;
       const tool = TOOLS[call.function.name] as
@@ -224,11 +325,21 @@ export async function runCopilot(
         result = { data: { error: String(error) }, source: 'n/a' };
       }
       if (tool) toolsUsed.push({ name: call.function.name, source: result.source });
+
+      if (call.function.name === 'best_match_for_profile') {
+        const data = result.data as { formattedReply?: string; emptyMessage?: string };
+        bestMatchReply = data.formattedReply ?? data.emptyMessage;
+      }
+
       messages.push({
         role: 'tool',
         tool_call_id: call.id,
         content: JSON.stringify(result),
       });
+    }
+
+    if (bestMatchReply) {
+      return { reply: bestMatchReply, toolsUsed, model };
     }
   }
 

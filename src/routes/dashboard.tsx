@@ -489,8 +489,8 @@ function UserMenu({ email, onSignOut }: { email: string; onSignOut: () => void }
 const SUGGESTED = [
   'Chart the districts with the strongest price momentum.',
   'Show investor capital concentration by sector as a donut chart.',
+  'I work in ADGM with a budget of AED 2M and want a 2 bedroom apartment near restaurants with good rental yield. Which districts should I consider?',
   'Where should a balanced fund with AED 200M-600M deploy capital this quarter?',
-  'Compare average price per sqm across the top districts.',
 ];
 
 type ConversationMeta = { id: string; title: string; updatedAt: string };
