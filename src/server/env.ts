@@ -13,14 +13,17 @@ const databaseUrlSchema = z
         return (
           (url.protocol === 'postgres:' || url.protocol === 'postgresql:') &&
           Boolean(url.hostname) &&
-          url.hostname !== 'base'
+          url.hostname !== 'base' &&
+          Boolean(url.username) &&
+          url.username !== 'USER' &&
+          url.password !== 'PASSWORD'
         );
       } catch {
         return false;
       }
     },
     {
-      message: 'must be a valid postgres:// or postgresql:// URL',
+      message: 'must be a valid postgres:// or postgresql:// URL with real credentials',
     },
   );
 
