@@ -178,12 +178,12 @@ export function MarketDashboard({ data }: { data: Summary | null }) {
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_1fr]">
         <Card className="overflow-hidden border-border/80">
-          <CardHeader className="border-b border-border/60 bg-gradient-to-r from-(--ink-deep) to-slate-900 pb-4">
+          <CardHeader className="border-b border-border/60 pb-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <CardTitle className="text-base text-white">Geographic market view</CardTitle>
-                <p className="mt-1 text-sm text-white/65">
-                  Districts sized by price, colored by 6-month momentum
+                <CardTitle className="text-base">Geographic market view</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Abu Dhabi street map with districts sized by price and colored by momentum
                 </p>
               </div>
               {selectedDistrict && (

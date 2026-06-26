@@ -2853,19 +2853,16 @@ function OverviewPage({
       </section>
 
       <section className="grid gap-6 xl:grid-cols-12">
-        <Card className="overflow-hidden xl:col-span-7">
-          <CardHeader className="border-b border-border/60 bg-gradient-to-r from-(--ink-deep) to-slate-900 pb-4">
+        <Card className="overflow-hidden border-border/80 xl:col-span-7">
+          <CardHeader className="border-b border-border/60 pb-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-base text-white">Market map</CardTitle>
-                <p className="text-sm text-white/65">District pricing and momentum at a glance</p>
+                <CardTitle className="text-base">Market map</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Districts on Abu Dhabi street map · sized by price, colored by momentum
+                </p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-white/20 bg-white/10 text-white hover:bg-white/20"
-                onClick={() => onNavigate('Market')}
-              >
+              <Button variant="outline" size="sm" onClick={() => onNavigate('Market')}>
                 Full market view
               </Button>
             </div>

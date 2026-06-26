@@ -771,3 +771,72 @@ body::after {
 .mock-row {
   border-top: 1px solid var(--line);
 }
+
+/* Leaflet market map */
+.market-map-shell .leaflet-container {
+  height: 100%;
+  width: 100%;
+  font-family: var(--font-sans);
+  background: #e8eef4;
+}
+
+.market-map-shell .leaflet-control-zoom {
+  border: none !important;
+  box-shadow: 0 8px 24px rgba(23, 18, 14, 0.12) !important;
+  overflow: hidden;
+  border-radius: 0.65rem !important;
+}
+
+.market-map-shell .leaflet-control-zoom a {
+  border: none !important;
+  border-bottom: 1px solid var(--line) !important;
+  background: var(--card) !important;
+  color: var(--ink) !important;
+  width: 2rem !important;
+  height: 2rem !important;
+  line-height: 2rem !important;
+  font-weight: 700;
+}
+
+.market-map-shell .leaflet-control-zoom a:last-child {
+  border-bottom: none !important;
+}
+
+.market-map-shell .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.82) !important;
+  color: var(--ink-faint) !important;
+  font-size: 0.58rem !important;
+  padding: 2px 6px !important;
+  border-radius: 0.45rem 0 0 0;
+  backdrop-filter: blur(6px);
+}
+
+.market-map-shell .leaflet-control-attribution a {
+  color: var(--ink-soft) !important;
+}
+
+.market-map-tooltip {
+  border: 1px solid var(--line) !important;
+  border-radius: 0.55rem !important;
+  box-shadow: 0 8px 24px rgba(23, 18, 14, 0.12) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 0.72rem !important;
+  padding: 0.35rem 0.55rem !important;
+}
+
+.market-map-popup .leaflet-popup-content-wrapper {
+  border-radius: 0.85rem;
+  border: 1px solid var(--line);
+  box-shadow: 0 16px 40px rgba(23, 18, 14, 0.14);
+  padding: 0;
+}
+
+.market-map-popup .leaflet-popup-content {
+  margin: 0.75rem 0.9rem;
+  font-family: var(--font-sans);
+  line-height: 1.4;
+}
+
+.market-map-popup .leaflet-popup-tip {
+  box-shadow: none;
+}
