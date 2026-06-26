@@ -53,13 +53,14 @@ function testFormattedReply() {
   const reply = formatBestMatchReply(matches, profile);
 
   assert.match(reply, /## Districts to consider/);
+  assert.match(reply, /\| Rank \| District \|/);
   assert.match(reply, /## Top property listings/);
-  assert.match(reply, /\/100\*\*/);
+  assert.match(reply, /\| # \| District \| Score \|/);
   assert.match(reply, /## Next action/);
   assert.match(reply, /Sources:/);
 
   if (matches.length > 0) {
-    assert.match(reply, /Why it matches/);
+    assert.match(reply, /Why these match/);
   } else {
     assert.match(
       reply,

@@ -205,34 +205,40 @@ export function formatBestMatchReply(matches: PropertyMatch[], profile: ProfileI
   lines.push('');
 
   lines.push('## Districts to consider');
+  lines.push('');
+  lines.push('| Rank | District | Best score | Listings |');
+  lines.push('| --- | --- | --- | --- |');
   rankedDistricts.forEach((row, index) => {
     lines.push(
-      `${index + 1}. **${row.district}** — best match **${row.bestScore}/100** (${row.count} listing${row.count === 1 ? '' : 's'})`,
+      `| ${index + 1} | ${row.district} | ${row.bestScore}/100 | ${row.count} |`,
     );
   });
   lines.push('');
 
   lines.push('## Top property listings');
+  lines.push('');
+  lines.push('| # | District | Score | Type | Price | Size | Beds/Baths | Listing |');
+  lines.push('| --- | --- | --- | --- | --- | --- | --- | --- |');
   matches.forEach((match, index) => {
-    const listingLabel = match.kind === 'transaction' ? 'Transaction' : 'Parcel';
-    lines.push(`### ${index + 1}. ${match.district} — **${match.score}/100**`);
-    lines.push(`- **Listing:** ${listingLabel} \`${match.id}\``);
-    if (match.propertyType) lines.push(`- **Property type:** ${match.propertyType}`);
-    if (match.priceAed != null) lines.push(`- **Price:** ${formatAed(match.priceAed)}`);
-    if (match.sizeSqm != null) lines.push(`- **Size:** ${match.sizeSqm} sqm`);
-    if (match.estimatedBedrooms != null || match.estimatedBathrooms != null) {
-      lines.push(
-        `- **Est. bedrooms / bathrooms:** ${match.estimatedBedrooms ?? 'n/a'} / ${match.estimatedBathrooms ?? 'n/a'} (estimated from size)`,
-      );
-    }
-    if (match.reasons.length > 0) {
-      lines.push(`- **Why it matches:** ${match.reasons.join('; ')}`);
-    }
-    if (match.tradeoffs.length > 0) {
-      lines.push(`- **Trade-offs:** ${match.tradeoffs.join('; ')}`);
-    }
-    lines.push('');
+    const listingLabel = match.kind === 'transaction' ? 'Txn' : 'Parcel';
+    const beds =
+      match.estimatedBedrooms != null || match.estimatedBathrooms != null
+        ? `${match.estimatedBedrooms ?? '—'}/${match.estimatedBathrooms ?? '—'}`
+        : '—';
+    lines.push(
+      `| ${index + 1} | ${match.district} | ${match.score} | ${match.propertyType ?? '—'} | ${match.priceAed != null ? formatAed(match.priceAed) : '—'} | ${match.sizeSqm != null ? `${match.sizeSqm} sqm` : '—'} | ${beds} | ${listingLabel} \`${match.id}\` |`,
+    );
   });
+  lines.push('');
+
+  lines.push('### Why these match');
+  matches.forEach((match, index) => {
+    if (match.reasons.length === 0 && match.tradeoffs.length === 0) return;
+    lines.push(
+      `${index + 1}. **${match.district}** (${match.id}): ${match.reasons.join('; ')}${match.tradeoffs.length > 0 ? ` — *${match.tradeoffs.join('; ')}*` : ''}`,
+    );
+  });
+  lines.push('');
 
   lines.push('## Next action');
   lines.push(
