@@ -2,7 +2,6 @@ import { GoogleGenAI } from '@google/genai';
 
 import { getDb } from '@/server/db';
 import { getEnv } from '@/server/env';
-import { getOpenAiClient, getOpenAiModel } from '@/server/openai';
 import {
   capitalSupplyBySector,
   portfolioSummary,
@@ -143,17 +142,21 @@ const USER_PROMPT = (context: string) =>
   `actions I should take on my portfolio. Respond with ONLY the JSON object described above — ` +
   `no commentary, no markdown fences.\n\n${context}`;
 
+function getGenAiClient(): GoogleGenAI | null {
+  const env = getEnv();
+  if (!env.GEMINI_API_KEY) return null;
+  return new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+}
+
 /**
  * Grounded path: uses the @google/genai Interactions API with the google_search
  * tool so the news is pulled from live web results, not just model memory.
  */
 async function generateWithGoogleSearch(): Promise<MarketNewsPayload | null> {
-  const env = getEnv();
-  if (!env.GEMINI_API_KEY) return null;
+  const client = getGenAiClient();
+  if (!client) return null;
 
-  const client = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-  const model = env.GEMINI_SEARCH_MODEL;
-
+  const model = getEnv().GEMINI_SEARCH_MODEL;
   const interaction = await client.interactions.create({
     model,
     input: `${SYSTEM_PROMPT}\n\n${USER_PROMPT(buildContext())}`,
@@ -176,25 +179,20 @@ async function generateWithGoogleSearch(): Promise<MarketNewsPayload | null> {
 }
 
 /**
- * Fallback path: OpenAI-compatible Gemini endpoint in JSON mode, using the
- * model's own knowledge when grounded search is unavailable.
+ * Fallback path: a plain (ungrounded) @google/genai interaction using the
+ * model's own knowledge, for when Google Search grounding is unavailable.
  */
-async function generateWithJsonMode(): Promise<MarketNewsPayload | null> {
-  const openai = getOpenAiClient();
-  if (!openai) return null;
+async function generateWithGemini(): Promise<MarketNewsPayload | null> {
+  const client = getGenAiClient();
+  if (!client) return null;
 
-  const model = getOpenAiModel();
+  const model = getEnv().GEMINI_SEARCH_MODEL;
   try {
-    const completion = await openai.chat.completions.create({
+    const interaction = await client.interactions.create({
       model,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: USER_PROMPT(buildContext()) },
-      ],
-      max_tokens: 2400,
-      response_format: { type: 'json_object' },
+      input: `${SYSTEM_PROMPT}\n\n${USER_PROMPT(buildContext())}`,
     });
-    const content = completion.choices[0]?.message?.content?.trim();
+    const content = interaction.output_text?.trim();
     if (!content) return null;
     const coerced = coercePayload(extractJson(content));
     if (!coerced) return null;
@@ -217,7 +215,7 @@ async function generateNews(): Promise<MarketNewsPayload | null> {
   } catch (error) {
     console.error('grounded news generation failed, falling back', error);
   }
-  return generateWithJsonMode();
+  return generateWithGemini();
 }
 
 /**

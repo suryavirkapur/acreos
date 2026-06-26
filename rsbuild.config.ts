@@ -33,6 +33,12 @@ export default defineConfig({
       // component as the email body. We always send raw `html`, so this optional
       // dependency is never reached. Ignore it to silence the build warning.
       config.plugins.push(new rspack.IgnorePlugin({ resourceRegExp: /^@react-email\/render$/ }));
+      // `ws` (pulled in transitively by @google/genai's live API, which we don't
+      // use) optionally `require()`s these native acceleration addons inside a
+      // try/catch. They are uninstalled optional deps — ignore to silence warnings.
+      config.plugins.push(
+        new rspack.IgnorePlugin({ resourceRegExp: /^(utf-8-validate|bufferutil)$/ }),
+      );
     },
   },
 });
