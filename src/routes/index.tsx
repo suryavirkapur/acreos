@@ -229,7 +229,7 @@ function App() {
       <section className="hero-full -mt-px flex min-h-160 items-center lg:min-h-195">
         <img
           src="/saadiyat-beachfront.webp"
-          alt="Illustration of a luxury Saadiyat Island beachfront vacation villa with an infinity pool, palm trees, and turquoise Arabian Gulf water"
+          alt="Cozy Saadiyat Island beach house at golden hour, with the Louvre Abu Dhabi, Sheikh Zayed Grand Mosque, and Etihad Towers along the skyline"
           className="hero-full-img"
           fetchPriority="high"
         />
