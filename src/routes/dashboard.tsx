@@ -197,6 +197,119 @@ const DEFAULT_INSTITUTIONAL_WEIGHTS: Required<
   infrastructure: 0.3,
 };
 
+const WEIGHT_LABELS: Record<string, string> = {
+  amenity: 'Amenity fit',
+  commute: 'Commute',
+  affordability: 'Affordability',
+  yield: 'Yield',
+  infrastructure: 'Infrastructure',
+};
+
+function activeWeightKeys(investorType: InvestorProfile['investorType']) {
+  return investorType === 'institutional'
+    ? (['amenity', 'yield', 'infrastructure'] as const)
+    : (['amenity', 'commute', 'affordability'] as const);
+}
+
+function weightDefaults(investorType: InvestorProfile['investorType']): Record<string, number> {
+  return investorType === 'institutional' ? DEFAULT_INSTITUTIONAL_WEIGHTS : DEFAULT_RETAIL_WEIGHTS;
+}
+
+function rawWeight(weights: ScoringWeights | undefined, key: string, fallback: number): number {
+  const v = weights?.[key as keyof ScoringWeights];
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : fallback;
+}
+
+/** Normalized (sum-to-1) contribution of each active factor, used for display + description. */
+function normalizedWeights(
+  investorType: InvestorProfile['investorType'],
+  weights: ScoringWeights | undefined,
+): Record<string, number> {
+  const keys = activeWeightKeys(investorType);
+  const defaults = weightDefaults(investorType);
+  const raw: Record<string, number> = {};
+  let sum = 0;
+  for (const k of keys) {
+    raw[k] = rawWeight(weights, k, defaults[k]);
+    sum += raw[k];
+  }
+  const out: Record<string, number> = {};
+  for (const k of keys) out[k] = sum > 0 ? raw[k] / sum : defaults[k];
+  return out;
+}
+
+function WeightTuner({
+  investorType,
+  weights,
+  onChange,
+}: {
+  investorType: InvestorProfile['investorType'];
+  weights?: ScoringWeights;
+  onChange: (next: ScoringWeights) => void;
+}) {
+  const keys = activeWeightKeys(investorType);
+  const defaults = weightDefaults(investorType);
+  const normalized = normalizedWeights(investorType, weights);
+
+  function materialize(): Record<string, number> {
+    const next: Record<string, number> = { ...weights };
+    for (const k of keys) next[k] = rawWeight(weights, k, defaults[k]);
+    return next;
+  }
+
+  function setWeight(key: string, percent: number) {
+    const next = materialize();
+    next[key] = percent / 100;
+    onChange(next);
+  }
+
+  function reset() {
+    const next: Record<string, number> = { ...weights };
+    for (const k of keys) next[k] = defaults[k];
+    onChange(next);
+  }
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between">
+        <p className="text-xs font-semibold text-muted-foreground">Ranking weights</p>
+        <button type="button" onClick={reset} className="text-xs font-medium text-primary hover:underline">
+          Reset to defaults
+        </button>
+      </div>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Tune how much each factor drives your “Recommended for you” ranking. Shares are normalized to
+        100% and the list re-ranks live as you drag.
+      </p>
+      <div className="space-y-3">
+        {keys.map((key) => {
+          const raw = rawWeight(weights, key, defaults[key]);
+          return (
+            <div key={key}>
+              <div className="mb-1 flex items-center justify-between text-xs">
+                <span className="font-medium text-foreground">{WEIGHT_LABELS[key]}</span>
+                <span className="tabular-nums text-muted-foreground">
+                  {Math.round(normalized[key] * 100)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={Math.round(raw * 100)}
+                onChange={(e) => setWeight(key, Number(e.target.value))}
+                aria-label={`${WEIGHT_LABELS[key]} weight`}
+                className="h-2 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 type Recommendation = {
   district: string;
   score: number;
@@ -1625,6 +1738,12 @@ function ProfilePage({
               </div>
             </div>
 
+            <WeightTuner
+              investorType={profile.investorType}
+              weights={profile.scoringWeights}
+              onChange={(scoringWeights) => update({ scoringWeights })}
+            />
+
             <div>
               <div className="flex items-center gap-3">
                 <Button onClick={save} disabled={saving}>
@@ -1650,9 +1769,13 @@ function ProfilePage({
         <CardHeader>
           <CardTitle className="text-base">Recommended for you</CardTitle>
           <p className="text-sm text-muted-foreground">
-            {isRetail
-              ? 'Ranked live as you edit. Score blends amenity fit (40%), commute (35%) and affordability (25%).'
-              : 'Ranked live as you edit. Score blends yield (45%), infrastructure (30%) and amenity fit (25%).'}
+            {(() => {
+              const nw = normalizedWeights(profile.investorType, profile.scoringWeights);
+              const pct = (k: string) => Math.round(nw[k] * 100);
+              return isRetail
+                ? `Ranked live as you edit. Score blends amenity fit (${pct('amenity')}%), commute (${pct('commute')}%) and affordability (${pct('affordability')}%).`
+                : `Ranked live as you edit. Score blends yield (${pct('yield')}%), infrastructure (${pct('infrastructure')}%) and amenity fit (${pct('amenity')}%).`;
+            })()}
           </p>
         </CardHeader>
         <CardContent className="space-y-2.5">
