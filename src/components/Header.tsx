@@ -68,14 +68,16 @@ function PlatformDropdown() {
       </button>
 
       {open && (
-        <div className="nav-menu rise-in w-72" role="menu">
+        <div className="nav-menu rise-in w-[19rem]" role="menu">
           {PLATFORM.map((item) => (
             <a key={item.label} href="#platform" role="menuitem" onClick={() => setOpen(false)}>
-              <span className="flex items-center gap-2 font-semibold text-(--ink)">
-                <item.icon className="size-4 text-(--brand)" />
-                {item.label}
+              <span className="nav-menu-icon">
+                <item.icon className="size-[1.05rem]" />
               </span>
-              <span>{item.desc}</span>
+              <span className="nav-menu-text">
+                <span className="nav-menu-title">{item.label}</span>
+                <span className="nav-menu-desc">{item.desc}</span>
+              </span>
             </a>
           ))}
         </div>
