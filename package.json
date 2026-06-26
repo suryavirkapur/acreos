@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "rsbuild",
-    "build": "rsbuild build",
+    "build": "pnpm data:generate && rsbuild build",
     "preview": "rsbuild preview",
     "start": "srvx --prod -s ../client dist/server/index.js",
     "postinstall": "prisma generate",
@@ -14,6 +14,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "data:generate": "tsx scripts/generate-data-store.ts",
+    "data:seed": "tsx scripts/seed-data.ts",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "fmt": "oxfmt",
