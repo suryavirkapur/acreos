@@ -74,17 +74,37 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number];
 
-const NAV: { label: Tab; icon: typeof LayoutDashboard }[] = [
-  { label: 'Overview', icon: LayoutDashboard },
-  { label: 'Portfolio', icon: Briefcase },
-  { label: 'Profile', icon: UserCircle },
-  { label: 'Best Match', icon: MapPin },
-  { label: 'Assistant', icon: Dog },
-  { label: 'Opportunities', icon: Building2 },
-  { label: 'Explore', icon: Search },
-  { label: 'Market', icon: TrendingUp },
-  { label: 'Investors', icon: Users },
+const NAV_GROUPS: Array<{
+  label: string;
+  items: { label: Tab; icon: typeof LayoutDashboard }[];
+}> = [
+  {
+    label: 'Workspace',
+    items: [
+      { label: 'Overview', icon: LayoutDashboard },
+      { label: 'Portfolio', icon: Briefcase },
+      { label: 'Assistant', icon: Dog },
+    ],
+  },
+  {
+    label: 'Investing',
+    items: [
+      { label: 'Profile', icon: UserCircle },
+      { label: 'Best Match', icon: MapPin },
+      { label: 'Opportunities', icon: Building2 },
+    ],
+  },
+  {
+    label: 'Market data',
+    items: [
+      { label: 'Explore', icon: Search },
+      { label: 'Market', icon: TrendingUp },
+      { label: 'Investors', icon: Users },
+    ],
+  },
 ];
+
+const NAV = NAV_GROUPS.flatMap((group) => group.items);
 
 const TAB_SUBTITLE: Record<Tab, string> = {
   Overview: 'Grounded in Abu Dhabi parcels, transactions, investors & communities',
@@ -383,6 +403,48 @@ type Summary = {
   capitalSupply: Array<{ sector: string; mandates: number }>;
   serviceDemand: Array<{ district: string; avgDemandIndex: number }>;
 };
+
+type PortfolioParcel = Summary['topVacant'][number] & {
+  source?: 'market' | 'custom';
+};
+
+type PortfolioDraft = {
+  parcelId: string;
+  district: string;
+  landUse: string;
+  recommendedUse: string;
+  valueAed: string;
+  score: string;
+};
+
+const CUSTOM_PORTFOLIO_KEY = 'acreos.customPortfolio';
+
+const EMPTY_PORTFOLIO_DRAFT: PortfolioDraft = {
+  parcelId: '',
+  district: '',
+  landUse: 'residential',
+  recommendedUse: '',
+  valueAed: '',
+  score: '',
+};
+
+function readCustomPortfolio(): PortfolioParcel[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = window.localStorage.getItem(CUSTOM_PORTFOLIO_KEY);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as PortfolioParcel[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item) =>
+        typeof item?.parcel_id === 'string' &&
+        typeof item?.district === 'string' &&
+        typeof item?.estimated_value_aed === 'number',
+    );
+  } catch {
+    return [];
+  }
+}
 
 type NewsItem = {
   title: string;
@@ -2770,8 +2832,14 @@ function PortfolioPage({
   data: Summary | null;
   onNavigate: (tab: Tab) => void;
 }) {
+  const [customPortfolio, setCustomPortfolio] = useState<PortfolioParcel[]>(readCustomPortfolio);
+  const [draft, setDraft] = useState<PortfolioDraft>(EMPTY_PORTFOLIO_DRAFT);
   const summary = data?.summary;
-  const topPipeline = data?.topVacant.slice(0, 4) ?? [];
+  const basePipeline: PortfolioParcel[] = (data?.topVacant ?? []).map((parcel) =>
+    Object.assign({}, parcel, { source: 'market' as const }),
+  );
+  const portfolioPipeline = [...customPortfolio, ...basePipeline];
+  const topPipeline = portfolioPipeline.slice(0, 6);
   const topDrops = HOMEPAGE_PRICE_DROPS.slice(0, 5);
   const maxMandates = Math.max(1, ...(data?.capitalSupply ?? []).map((row) => row.mandates));
   const totalDropValue = topDrops.reduce((sum, listing) => sum + listing.largestTotalDrop, 0);
@@ -2779,12 +2847,55 @@ function PortfolioPage({
     topDrops.length > 0
       ? topDrops.reduce((sum, listing) => sum + listing.largestTotalDropPercent, 0) / topDrops.length
       : 0;
+  const customValue = customPortfolio.reduce((sum, parcel) => sum + parcel.estimated_value_aed, 0);
+  const trackedValue = (summary?.totalVacantValueAed ?? 0) + customValue;
+  const trackedParcels = (summary?.vacantParcels ?? 0) + customPortfolio.length;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(CUSTOM_PORTFOLIO_KEY, JSON.stringify(customPortfolio));
+  }, [customPortfolio]);
+
+  function updateDraft(field: keyof PortfolioDraft, value: string) {
+    setDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  function addPortfolioItem(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const parcelId = draft.parcelId.trim() || `CUSTOM-${Date.now().toString().slice(-6)}`;
+    const district = draft.district.trim();
+    const recommendedUse = draft.recommendedUse.trim() || 'portfolio asset';
+    const estimatedValue = Number(draft.valueAed);
+    const score = Number(draft.score);
+
+    if (!district || !Number.isFinite(estimatedValue) || estimatedValue <= 0) return;
+
+    setCustomPortfolio((items) => [
+      {
+        parcel_id: parcelId,
+        district,
+        development_potential_score: Number.isFinite(score)
+          ? Math.max(0, Math.min(100, Math.round(score)))
+          : 75,
+        recommended_use: recommendedUse,
+        estimated_value_aed: Math.round(estimatedValue),
+        land_use: draft.landUse.trim() || 'residential',
+        source: 'custom',
+      },
+      ...items.filter((item) => item.parcel_id !== parcelId),
+    ]);
+    setDraft(EMPTY_PORTFOLIO_DRAFT);
+  }
+
+  function removePortfolioItem(parcelId: string) {
+    setCustomPortfolio((items) => items.filter((item) => item.parcel_id !== parcelId));
+  }
 
   const metrics = [
     {
       label: 'Tracked land value',
-      value: summary ? aedShort(summary.totalVacantValueAed) : '—',
-      sub: summary ? `${summary.vacantParcels} vacant parcels` : 'Loading',
+      value: summary || customPortfolio.length ? aedShort(trackedValue) : '—',
+      sub: summary || customPortfolio.length ? `${trackedParcels} tracked assets` : 'Loading',
       icon: Wallet,
     },
     {
@@ -2830,6 +2941,69 @@ function PortfolioPage({
         ))}
       </section>
 
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-base">Add to portfolio</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Track your own assets alongside AcreOS market opportunities
+            </p>
+          </div>
+          <Badge variant="secondary">{customPortfolio.length} custom</Badge>
+        </CardHeader>
+        <CardContent>
+          <form
+            onSubmit={addPortfolioItem}
+            className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_1fr_9rem_7rem_auto]"
+          >
+            <Input
+              value={draft.parcelId}
+              onChange={(event) => updateDraft('parcelId', event.target.value)}
+              placeholder="Asset ID"
+              aria-label="Asset ID"
+            />
+            <Input
+              value={draft.district}
+              onChange={(event) => updateDraft('district', event.target.value)}
+              placeholder="District"
+              aria-label="District"
+              required
+            />
+            <Input
+              value={draft.landUse}
+              onChange={(event) => updateDraft('landUse', event.target.value)}
+              placeholder="Land use"
+              aria-label="Land use"
+            />
+            <Input
+              value={draft.recommendedUse}
+              onChange={(event) => updateDraft('recommendedUse', event.target.value)}
+              placeholder="Strategy"
+              aria-label="Strategy"
+            />
+            <Input
+              value={draft.valueAed}
+              onChange={(event) => updateDraft('valueAed', event.target.value)}
+              placeholder="Value AED"
+              aria-label="Value AED"
+              inputMode="numeric"
+              required
+            />
+            <Input
+              value={draft.score}
+              onChange={(event) => updateDraft('score', event.target.value)}
+              placeholder="Score"
+              aria-label="Score"
+              inputMode="numeric"
+            />
+            <Button type="submit" className="md:px-3">
+              <Plus className="size-4" />
+              Add
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
@@ -2846,7 +3020,7 @@ function PortfolioPage({
           <CardContent className="space-y-3">
             {topPipeline.map((parcel) => (
               <div
-                key={parcel.parcel_id}
+                key={`${parcel.source}-${parcel.parcel_id}`}
                 className="grid gap-3 rounded-lg border border-border bg-muted/30 p-3 sm:grid-cols-[1fr_auto]"
               >
                 <div className="min-w-0">
@@ -2854,6 +3028,7 @@ function PortfolioPage({
                     <span className="font-semibold text-foreground">{parcel.parcel_id}</span>
                     <Badge variant="secondary">{parcel.district}</Badge>
                     <Badge variant="outline">{titleCase(parcel.land_use)}</Badge>
+                    {parcel.source === 'custom' && <Badge variant="warning">Custom</Badge>}
                   </div>
                   <p className="mt-1 truncate text-sm text-muted-foreground">
                     {titleCase(parcel.recommended_use)}
@@ -2876,6 +3051,17 @@ function PortfolioPage({
                       {parcel.development_potential_score}
                     </p>
                   </div>
+                  {parcel.source === 'custom' && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removePortfolioItem(parcel.parcel_id)}
+                      aria-label={`Remove ${parcel.parcel_id}`}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -3086,22 +3272,29 @@ function Dashboard() {
           </span>
         </div>
 
-        <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
-          {NAV.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              onClick={() => setTab(item.label)}
-              className={cn(
-                'flex shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors',
-                tab === item.label
-                  ? 'bg-primary/12 text-primary'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-              )}
-            >
-              <item.icon className="size-4.5" />
-              {item.label}
-            </button>
+        <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label} className="space-y-1">
+              <div className="px-3 text-[0.65rem] font-bold tracking-wide text-muted-foreground/70 uppercase">
+                {group.label}
+              </div>
+              {group.items.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => setTab(item.label)}
+                  className={cn(
+                    'flex w-full shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors',
+                    tab === item.label
+                      ? 'bg-primary/12 text-primary'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  <item.icon className="size-4.5" />
+                  {item.label}
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
 
