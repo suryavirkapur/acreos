@@ -9,7 +9,7 @@
   },
   "rewrites": [
     {
-      "source": "/((?!assets/|static/|favicon.ico|robots.txt|manifest.json|logo192.png|logo512.png|clouds-bg.png|corgi-hero.png|hand-halftone.png).*)",
+      "source": "/((?!assets/|static/|favicon.ico|favicon.svg|robots.txt|manifest.json|logo192.png|logo512.png|clouds-bg.png|corgi-hero.png|hand-halftone.png|saadiyat-beachfront.webp).*)",
       "destination": "/api"
     }
   ]

@@ -225,54 +225,70 @@ function Faq() {
 function App() {
   return (
     <main className="relative">
-      {/* hero */}
-      <section className="page-wrap grid items-center gap-12 px-4 pt-16 pb-20 lg:grid-cols-[1.05fr_0.95fr] lg:pt-24">
-        <div className="rise-in">
-          <span className="inline-flex items-center gap-2 rounded-full border border-(--line) bg-(--card) px-3 py-1 text-xs font-semibold text-(--ink-soft) shadow-sm">
-            <span className="size-1.5 rounded-full bg-(--brand)" />
-            Announcing our $100M raise — Series A
-          </span>
+      {/* hero — full-bleed Saadiyat Island beachfront */}
+      <section className="hero-full -mt-px flex min-h-160 items-center lg:min-h-195">
+        <img
+          src="/saadiyat-beachfront.webp"
+          alt="Illustration of a luxury Saadiyat Island beachfront vacation villa with an infinity pool, palm trees, and turquoise Arabian Gulf water"
+          className="hero-full-img"
+          fetchPriority="high"
+        />
+        <div className="hero-full-scrim" />
 
-          <h1 className="display-title mt-6 text-5xl leading-[1.04] font-extrabold tracking-tight text-(--ink) sm:text-6xl xl:text-7xl">
-            Property investment, <span className="hero-accent">run by AI agents.</span>
-          </h1>
+        <div className="page-wrap relative px-4 py-24 lg:py-32">
+          <div className="rise-in max-w-2xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+              <span className="size-1.5 rounded-full bg-(--brand)" />
+              Announcing our $100M raise — Series A
+            </span>
 
-          <p className="mt-6 max-w-xl text-lg text-(--ink-soft)">
-            AcreOS is an AI-native platform where agents carry sourcing, diligence, execution, and
-            portfolio management — so you focus on judgment, relationships, and capital allocation.
-          </p>
+            <h1 className="display-title mt-6 text-5xl leading-[1.02] font-extrabold tracking-tight text-white sm:text-6xl xl:text-7xl">
+              Property investment, <span className="hero-accent-light">run by AI agents.</span>
+            </h1>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link to="/login" className="btn-brand text-base">
-              Get started
-              <ArrowRight className="size-4" />
-            </Link>
-            <a href="#how-it-works" className="btn-brand bg-(--ink)! text-base hover:bg-black!">
-              See how it works
-            </a>
-          </div>
-
-          <div className="mt-12">
-            <p className="mb-4 text-xs font-semibold tracking-[0.16em] text-(--ink-faint) uppercase">
-              Backed by the best
+            <p className="mt-6 max-w-xl text-lg text-white/85">
+              AcreOS is an AI-native platform where agents carry sourcing, diligence, execution, and
+              portfolio management — so you focus on judgment, relationships, and capital allocation.
             </p>
-            <div className="flex flex-wrap items-center gap-x-7 gap-y-3 opacity-70">
-              {INVESTORS.map((name) => (
-                <span
-                  key={name}
-                  className="font-serif text-base font-medium tracking-tight text-(--ink-soft) sm:text-lg"
-                >
-                  {name}
-                </span>
-              ))}
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link to="/login" className="btn-brand text-base">
+                Get started
+                <ArrowRight className="size-4" />
+              </Link>
+              <a
+                href="#how-it-works"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/10 px-6 py-3.5 text-base font-bold text-white backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/20"
+              >
+                See how it works
+              </a>
+            </div>
+
+            <div className="mt-12">
+              <p className="mb-4 text-xs font-semibold tracking-[0.16em] text-white/55 uppercase">
+                Backed by the best
+              </p>
+              <div className="flex flex-wrap items-center gap-x-7 gap-y-3">
+                {INVESTORS.map((name) => (
+                  <span
+                    key={name}
+                    className="font-serif text-base font-medium tracking-tight text-white/80 sm:text-lg"
+                  >
+                    {name}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
+      </section>
 
-        <div className="rise-in" style={{ animationDelay: '120ms' }}>
+      {/* live deals preview, overlapping the hero */}
+      <div className="page-wrap relative z-10 -mt-16 px-4 lg:-mt-24">
+        <div className="rise-in mx-auto max-w-3xl" style={{ animationDelay: '120ms' }}>
           <ProductPreview />
         </div>
-      </section>
+      </div>
 
       {/* flow */}
       <section id="how-it-works" className="page-wrap px-4 py-20">
