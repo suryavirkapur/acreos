@@ -28,13 +28,24 @@ export const Route = createFileRoute('/dashboard')({
   component: Dashboard,
 });
 
-const NAV = [
-  { label: 'Overview', icon: LayoutDashboard, active: true },
+const TABS = ['Overview', 'Copilot', 'Opportunities', 'Market', 'Investors'] as const;
+type Tab = (typeof TABS)[number];
+
+const NAV: { label: Tab; icon: typeof LayoutDashboard }[] = [
+  { label: 'Overview', icon: LayoutDashboard },
   { label: 'Copilot', icon: Sparkles },
   { label: 'Opportunities', icon: Building2 },
+  { label: 'Market', icon: TrendingUp },
   { label: 'Investors', icon: Users },
-  { label: 'Memos', icon: FileText },
 ];
+
+const TAB_SUBTITLE: Record<Tab, string> = {
+  Overview: 'Grounded in Abu Dhabi parcels, transactions, investors & communities',
+  Copilot: 'Ask cross-dataset questions, get cited answers',
+  Opportunities: 'Match investor mandates to land parcels',
+  Market: 'District price levels and momentum',
+  Investors: 'Active mandates across the UAE',
+};
 
 const AED = new Intl.NumberFormat('en-AE', { maximumFractionDigits: 0 });
 
@@ -487,11 +498,128 @@ function CapitalAllocator({ investors }: { investors: Investor[] }) {
   );
 }
 
+function MarketTable({ data }: { data: Summary | null }) {
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle className="text-base">District price momentum</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Recent vs prior 6-month price/sqm, from transactions
+          </p>
+        </div>
+      </CardHeader>
+      <CardContent className="px-0 pb-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-y border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
+                <th className="px-6 py-3 font-semibold">District</th>
+                <th className="p-3 text-right font-semibold">Avg AED/sqm</th>
+                <th className="p-3 text-right font-semibold">Txns</th>
+                <th className="px-6 py-3 text-right font-semibold">Momentum</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data?.priceTrends ?? []).map((t) => (
+                <tr
+                  key={t.district}
+                  className="border-b border-border/70 last:border-0 hover:bg-muted/50"
+                >
+                  <td className="px-6 py-3 font-semibold text-foreground">{t.district}</td>
+                  <td className="p-3 text-right text-foreground">{AED.format(t.avgPricePerSqm)}</td>
+                  <td className="p-3 text-right text-muted-foreground">{t.txnCount}</td>
+                  <td className="px-6 py-3 text-right">
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 font-semibold',
+                        t.momentumPct >= 0 ? 'text-emerald-700' : 'text-destructive',
+                      )}
+                    >
+                      <ArrowUpRight className={cn('size-3.5', t.momentumPct < 0 && 'rotate-90')} />
+                      {t.momentumPct >= 0 ? '+' : ''}
+                      {t.momentumPct}%
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {!data && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
+                    Loading district data…
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function InvestorsTable({ investors }: { investors: Investor[] }) {
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle className="text-base">Investor mandates</CardTitle>
+          <p className="text-sm text-muted-foreground">{investors.length} active profiles</p>
+        </div>
+      </CardHeader>
+      <CardContent className="px-0 pb-0">
+        <div className="max-h-[640px] overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-card">
+              <tr className="border-y border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
+                <th className="px-6 py-3 font-semibold">Investor</th>
+                <th className="p-3 font-semibold">Sector</th>
+                <th className="p-3 font-semibold">District</th>
+                <th className="p-3 font-semibold">Capital</th>
+                <th className="px-6 py-3 font-semibold">Risk</th>
+              </tr>
+            </thead>
+            <tbody>
+              {investors.map((inv) => (
+                <tr
+                  key={inv.investor_id}
+                  className="border-b border-border/70 last:border-0 hover:bg-muted/50"
+                >
+                  <td className="px-6 py-3">
+                    <div className="font-semibold text-foreground">{inv.investor_id}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {inv.investor_type.replace('_', ' ')}
+                    </div>
+                  </td>
+                  <td className="p-3 text-foreground">{inv.preferred_sector}</td>
+                  <td className="p-3 text-muted-foreground">{inv.preferred_district}</td>
+                  <td className="p-3 text-foreground">{inv.capital_range_aed}</td>
+                  <td className="px-6 py-3">
+                    <Badge variant="outline">{inv.risk_profile}</Badge>
+                  </td>
+                </tr>
+              ))}
+              {investors.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+                    Loading investors…
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function Dashboard() {
   const navigate = useNavigate();
   const { data: session, isPending } = authClient.useSession();
   const [data, setData] = useState<Summary | null>(null);
   const [investors, setInvestors] = useState<Investor[]>([]);
+  const [tab, setTab] = useState<Tab>('Overview');
 
   useEffect(() => {
     if (!isPending && !session) navigate({ to: '/login' });
@@ -568,40 +696,39 @@ function Dashboard() {
 
         <nav className="mt-8 flex flex-col gap-1">
           {NAV.map((item) => (
-            <a
+            <button
               key={item.label}
-              href={`#${item.label.toLowerCase()}`}
+              type="button"
+              onClick={() => setTab(item.label)}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
-                item.active
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors',
+                tab === item.label
                   ? 'bg-primary/12 text-primary'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground',
               )}
             >
               <item.icon className="size-4.5" />
               {item.label}
-            </a>
+            </button>
           ))}
         </nav>
 
-        <a
-          href="#settings"
-          className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        <button
+          type="button"
+          className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <Settings className="size-4.5" />
           Settings
-        </a>
+        </button>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex items-center gap-4 border-b border-border bg-background/85 px-5 py-3.5 backdrop-blur-md sm:px-8">
           <div>
             <h1 className="text-lg font-bold tracking-tight text-foreground">
-              UAE Investment Intelligence
+              {tab === 'Overview' ? 'UAE Investment Intelligence' : tab}
             </h1>
-            <p className="hidden text-xs text-muted-foreground sm:block">
-              Grounded in Abu Dhabi parcels, transactions, investors & communities
-            </p>
+            <p className="hidden text-xs text-muted-foreground sm:block">{TAB_SUBTITLE[tab]}</p>
           </div>
 
           <div className="ml-auto flex items-center gap-3">
@@ -613,94 +740,50 @@ function Dashboard() {
         </header>
 
         <main className="flex-1 space-y-6 px-5 py-6 sm:px-8">
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {stats.map((stat) => (
-              <Card key={stat.label}>
-                <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-semibold text-muted-foreground">
-                    {stat.label}
-                  </CardTitle>
-                  <span className="flex size-9 items-center justify-center rounded-lg bg-primary/12 text-primary">
-                    <stat.icon className="size-4.5" />
-                  </span>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-extrabold tracking-tight text-foreground">
-                    {stat.value}
-                  </div>
-                  <p className="mt-1 text-xs font-medium text-muted-foreground">{stat.sub}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </section>
+          {tab === 'Overview' && (
+            <>
+              <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {stats.map((stat) => (
+                  <Card key={stat.label}>
+                    <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-semibold text-muted-foreground">
+                        {stat.label}
+                      </CardTitle>
+                      <span className="flex size-9 items-center justify-center rounded-lg bg-primary/12 text-primary">
+                        <stat.icon className="size-4.5" />
+                      </span>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-extrabold tracking-tight text-foreground">
+                        {stat.value}
+                      </div>
+                      <p className="mt-1 text-xs font-medium text-muted-foreground">{stat.sub}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </section>
 
-          <div className="grid gap-6 xl:grid-cols-3">
-            <div className="space-y-6 xl:col-span-2">
-              <CapitalAllocator investors={investors} />
+              <div className="grid gap-6 xl:grid-cols-3">
+                <div className="space-y-6 xl:col-span-2">
+                  <CapitalAllocator investors={investors} />
+                  <MarketTable data={data} />
+                </div>
+                <Copilot />
+              </div>
+            </>
+          )}
 
-              <Card id="memos">
-                <CardHeader className="flex-row items-center justify-between space-y-0">
-                  <div>
-                    <CardTitle className="text-base">District price momentum</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Recent vs prior 6-month price/sqm, from transactions
-                    </p>
-                  </div>
-                </CardHeader>
-                <CardContent className="px-0 pb-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-y border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
-                          <th className="px-6 py-3 font-semibold">District</th>
-                          <th className="p-3 text-right font-semibold">Avg AED/sqm</th>
-                          <th className="p-3 text-right font-semibold">Txns</th>
-                          <th className="px-6 py-3 text-right font-semibold">Momentum</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(data?.priceTrends ?? []).map((t) => (
-                          <tr
-                            key={t.district}
-                            className="border-b border-border/70 last:border-0 hover:bg-muted/50"
-                          >
-                            <td className="px-6 py-3 font-semibold text-foreground">{t.district}</td>
-                            <td className="p-3 text-right text-foreground">
-                              {AED.format(t.avgPricePerSqm)}
-                            </td>
-                            <td className="p-3 text-right text-muted-foreground">{t.txnCount}</td>
-                            <td className="px-6 py-3 text-right">
-                              <span
-                                className={cn(
-                                  'inline-flex items-center gap-1 font-semibold',
-                                  t.momentumPct >= 0 ? 'text-emerald-700' : 'text-destructive',
-                                )}
-                              >
-                                <ArrowUpRight
-                                  className={cn('size-3.5', t.momentumPct < 0 && 'rotate-90')}
-                                />
-                                {t.momentumPct >= 0 ? '+' : ''}
-                                {t.momentumPct}%
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                        {!data && (
-                          <tr>
-                            <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
-                              Loading district data…
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
+          {tab === 'Copilot' && (
+            <div className="mx-auto max-w-3xl">
+              <Copilot />
             </div>
+          )}
 
-            <Copilot />
-          </div>
+          {tab === 'Opportunities' && <CapitalAllocator investors={investors} />}
+
+          {tab === 'Market' && <MarketTable data={data} />}
+
+          {tab === 'Investors' && <InvestorsTable investors={investors} />}
         </main>
       </div>
     </div>
