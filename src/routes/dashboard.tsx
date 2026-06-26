@@ -143,6 +143,14 @@ type InvestorProfile = {
   preferredDistricts?: string[];
   mustHaveAmenities?: string[];
   workplaceDistrict?: string;
+  purpose?: string;
+  propertyType?: string;
+  budgetMinAed?: number;
+  budgetMaxAed?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  minSizeSqm?: number;
+  lifestylePriorities?: string[];
 };
 
 type Recommendation = {
@@ -1517,6 +1525,7 @@ function ProfilePage({
 
 function BestMatchPage({ facets }: { facets: Facets | null }) {
   const [form, setForm] = useState<BestMatchForm>({ purpose: 'live' });
+  const [profileBase, setProfileBase] = useState<Partial<InvestorProfile>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -1532,6 +1541,7 @@ function BestMatchPage({ facets }: { facets: Facets | null }) {
       .then((d) => {
         const p = d.profile;
         if (!p) return;
+        setProfileBase(p);
         setForm((prev) => ({
           ...prev,
           purpose: p.purpose ?? prev.purpose,
@@ -1603,12 +1613,21 @@ function BestMatchPage({ facets }: { facets: Facets | null }) {
     setSaving(true);
     setSaved(false);
     try {
+      const payload = {
+        ...profileBase,
+        ...form,
+        investorType: profileBase.investorType ?? 'retail',
+      };
       const res = await fetch('/api/intel/profile', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ...form, investorType: 'retail' }),
+        body: JSON.stringify(payload),
       });
-      if (res.ok) setSaved(true);
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        setProfileBase(data?.profile ?? payload);
+        setSaved(true);
+      }
     } finally {
       setSaving(false);
     }
