@@ -7,6 +7,7 @@ import {
   isPropertyRecommendationQuestion,
   profileInputFromToolArgs,
 } from '@/server/data/copilot-profile';
+import { enrichReplyWithCharts } from '@/server/data/copilot-charts';
 import { matchMandateToParcels } from '@/server/data/matching';
 import {
   capitalSupplyBySector,
@@ -290,6 +291,7 @@ export async function runCopilot(
   ];
 
   const toolsUsed: { name: string; source: string }[] = [];
+  const toolResults: Array<{ name: string; data: unknown }> = [];
 
   for (let step = 0; step < 5; step++) {
     const completion = await openai.chat.completions.create({
@@ -307,7 +309,8 @@ export async function runCopilot(
 
     const calls = choice.tool_calls ?? [];
     if (calls.length === 0) {
-      return { reply: choice.content?.trim() ?? 'No answer produced.', toolsUsed, model };
+      const reply = choice.content?.trim() ?? 'No answer produced.';
+      return { reply: enrichReplyWithCharts(reply, toolResults), toolsUsed, model };
     }
 
     let bestMatchReply: string | undefined;
@@ -325,6 +328,7 @@ export async function runCopilot(
         result = { data: { error: String(error) }, source: 'n/a' };
       }
       if (tool) toolsUsed.push({ name: call.function.name, source: result.source });
+      toolResults.push({ name: call.function.name, data: result.data });
 
       if (call.function.name === 'best_match_for_profile') {
         const data = result.data as { formattedReply?: string; emptyMessage?: string };

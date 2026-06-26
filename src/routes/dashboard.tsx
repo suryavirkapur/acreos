@@ -486,12 +486,33 @@ function UserMenu({ email, onSignOut }: { email: string; onSignOut: () => void }
   );
 }
 
-const SUGGESTED = [
-  'Chart the districts with the strongest price momentum.',
-  'Show investor capital concentration by sector as a donut chart.',
-  'I work in ADGM with a budget of AED 2M and want a 2 bedroom apartment near restaurants with good rental yield. Which districts should I consider?',
-  'Where should a balanced fund with AED 200M-600M deploy capital this quarter?',
-];
+const EXAMPLE_QUESTIONS = [
+  {
+    label: 'Price momentum chart',
+    question: 'Chart the districts with the strongest price momentum.',
+  },
+  {
+    label: 'Capital by sector',
+    question: 'Show investor capital concentration by sector as a donut chart.',
+  },
+  {
+    label: 'ADGM · 2BR · AED 2M',
+    question:
+      'I work in ADGM and have a budget of AED 2M. I want a 2 bedroom apartment near restaurants with good rental yield. Which districts should I consider?',
+  },
+  {
+    label: 'Fund deployment',
+    question: 'Where should a balanced fund with AED 200M-600M deploy capital this quarter?',
+  },
+  {
+    label: 'Avg price / sqm',
+    question: 'Compare average price per sqm across the top districts.',
+  },
+  {
+    label: 'Vacant parcels',
+    question: 'What are the top vacant parcels in Saadiyat Island?',
+  },
+] as const;
 
 type ConversationMeta = { id: string; title: string; updatedAt: string };
 
@@ -592,6 +613,12 @@ function Copilot() {
     }
   }
 
+  function tryExample(question: string) {
+    if (loading) return;
+    setInput(question);
+    void ask(question);
+  }
+
   return (
     <div className="flex h-full min-h-0" id="copilot">
       {showHistory && (
@@ -685,14 +712,15 @@ function Copilot() {
                   </p>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {SUGGESTED.map((q) => (
+                  {EXAMPLE_QUESTIONS.slice(0, 4).map((example) => (
                     <button
-                      key={q}
+                      key={example.label}
                       type="button"
-                      onClick={() => ask(q)}
+                      title={example.question}
+                      onClick={() => tryExample(example.question)}
                       className="rounded-xl border border-border bg-card px-4 py-3 text-left text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
                     >
-                      {q}
+                      {example.label}
                     </button>
                   ))}
                 </div>
@@ -755,23 +783,42 @@ function Copilot() {
         </div>
 
         <div className="border-t border-border bg-background/85 px-4 py-3 backdrop-blur-md sm:px-8">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              ask(input);
-            }}
-            className="mx-auto flex w-full max-w-3xl items-center gap-2"
-          >
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask the assistant… e.g. chart price momentum by district"
-              disabled={loading}
-            />
-            <Button type="submit" size="icon" disabled={loading || !input.trim()}>
-              <Send className="size-4" />
-            </Button>
-          </form>
+          <div className="mx-auto w-full max-w-3xl">
+            <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Example questions
+            </p>
+            <div className="mb-3 flex flex-wrap gap-2">
+              {EXAMPLE_QUESTIONS.map((example) => (
+                <button
+                  key={example.label}
+                  type="button"
+                  title={example.question}
+                  disabled={loading}
+                  onClick={() => tryExample(example.question)}
+                  className="rounded-full border border-border bg-muted/40 px-3 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-primary/8 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {example.label}
+                </button>
+              ))}
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                ask(input);
+              }}
+              className="flex items-center gap-2"
+            >
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask the assistant… e.g. chart price momentum by district"
+                disabled={loading}
+              />
+              <Button type="submit" size="icon" disabled={loading || !input.trim()}>
+                <Send className="size-4" />
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
