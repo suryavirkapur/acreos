@@ -43,6 +43,14 @@ model InvestorProfile {
   preferredDistricts String?
   mustHaveAmenities  String?
   workplaceDistrict  String?
+  purpose            String?
+  propertyType       String?
+  budgetMinAed       Int?
+  budgetMaxAed       Int?
+  bedrooms           Int?
+  bathrooms          Int?
+  minSizeSqm         Int?
+  lifestylePriorities String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

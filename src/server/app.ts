@@ -10,6 +10,7 @@ import {
   listConversations,
   saveTurn,
 } from '@/server/data/chats';
+import { matchBestForProfile } from '@/server/data/best-match';
 import { runCopilot } from '@/server/data/copilot';
 import { matchInvestorToParcels } from '@/server/data/matching';
 import { generateDealMemo } from '@/server/data/memo';
@@ -183,16 +184,35 @@ function parseProfile(body: Record<string, unknown>): ProfileInput {
   const p = (body.profile ?? body) as Record<string, unknown>;
   const strList = (v: unknown) =>
     Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : undefined;
+  const optionalInt = (v: unknown): number | undefined => {
+    if (typeof v === 'number' && Number.isFinite(v)) return Math.round(v);
+    if (typeof v === 'string' && v.trim() !== '') {
+      const parsed = Number(v);
+      if (Number.isFinite(parsed)) return Math.round(parsed);
+    }
+    return undefined;
+  };
+  const optionalStr = (v: unknown): string | undefined =>
+    typeof v === 'string' && v.trim() !== '' ? v : undefined;
+
   return {
     investorType: p.investorType === 'institutional' ? 'institutional' : 'retail',
-    budgetAed: typeof p.budgetAed === 'number' ? p.budgetAed : undefined,
-    capitalRange: typeof p.capitalRange === 'string' ? p.capitalRange : undefined,
-    riskProfile: typeof p.riskProfile === 'string' ? p.riskProfile : undefined,
-    horizon: typeof p.horizon === 'string' ? p.horizon : undefined,
+    budgetAed: optionalInt(p.budgetAed),
+    capitalRange: optionalStr(p.capitalRange),
+    riskProfile: optionalStr(p.riskProfile),
+    horizon: optionalStr(p.horizon),
     preferredSectors: strList(p.preferredSectors),
     preferredDistricts: strList(p.preferredDistricts),
     mustHaveAmenities: strList(p.mustHaveAmenities),
-    workplaceDistrict: typeof p.workplaceDistrict === 'string' ? p.workplaceDistrict : undefined,
+    workplaceDistrict: optionalStr(p.workplaceDistrict),
+    purpose: optionalStr(p.purpose),
+    propertyType: optionalStr(p.propertyType),
+    budgetMinAed: optionalInt(p.budgetMinAed),
+    budgetMaxAed: optionalInt(p.budgetMaxAed),
+    bedrooms: optionalInt(p.bedrooms),
+    bathrooms: optionalInt(p.bathrooms),
+    minSizeSqm: optionalInt(p.minSizeSqm),
+    lifestylePriorities: strList(p.lifestylePriorities),
   };
 }
 
@@ -203,6 +223,106 @@ app.get('/intel/amenities', (c) =>
 app.post('/intel/recommend', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   return c.json({ recommendations: recommendDistricts(parseProfile(body), 6) });
+});
+
+const PROFILE_FIELD_KEYS = [
+  'purpose',
+  'propertyType',
+  'budgetMinAed',
+  'budgetMaxAed',
+  'bedrooms',
+  'bathrooms',
+  'minSizeSqm',
+  'lifestylePriorities',
+  'workplaceDistrict',
+  'preferredDistricts',
+  'mustHaveAmenities',
+  'riskProfile',
+  'horizon',
+  'investorType',
+  'budgetAed',
+  'capitalRange',
+  'preferredSectors',
+] as const;
+
+function extractProfileSource(body: Record<string, unknown>): Record<string, unknown> | null {
+  if (body.profile != null) {
+    if (typeof body.profile !== 'object' || Array.isArray(body.profile)) return null;
+    return body.profile as Record<string, unknown>;
+  }
+  return body;
+}
+
+function hasProfilePayload(source: Record<string, unknown>): boolean {
+  return PROFILE_FIELD_KEYS.some((key) => {
+    const value = source[key];
+    if (value === undefined || value === null) return false;
+    if (typeof value === 'string' && value.trim() === '') return false;
+    if (Array.isArray(value) && value.length === 0) return false;
+    return true;
+  });
+}
+
+function parseBestMatchLimit(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.max(1, Math.min(20, Math.round(value)));
+  }
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return Math.max(1, Math.min(20, Math.round(parsed)));
+  }
+  return 5;
+}
+
+app.post('/intel/best-match', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return c.json(
+      {
+        error: 'invalid_request',
+        message: 'Request body must be a JSON object.',
+      },
+      400,
+    );
+  }
+
+  const record = body as Record<string, unknown>;
+  const profileSource = extractProfileSource(record);
+  if (!profileSource) {
+    return c.json(
+      {
+        error: 'invalid_profile',
+        message: 'profile must be an object when provided.',
+      },
+      400,
+    );
+  }
+
+  if (!hasProfilePayload(profileSource)) {
+    return c.json(
+      {
+        error: 'invalid_profile',
+        message:
+          'Provide at least one preference field (e.g. purpose, budgetMinAed, propertyType, preferredDistricts).',
+      },
+      400,
+    );
+  }
+
+  const profile = parseProfile(record);
+  const limit = parseBestMatchLimit(record.limit);
+  const matches = matchBestForProfile(profile, limit);
+
+  if (matches.length === 0) {
+    return c.json({
+      matches: [],
+      count: 0,
+      message:
+        'No matches found for these exact preferences. Try widening your budget, districts, property type, or size requirements.',
+    });
+  }
+
+  return c.json({ matches, count: matches.length });
 });
 
 app.get('/intel/profile', async (c) => {

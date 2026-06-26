@@ -26,6 +26,14 @@ export async function getProfile(userId: string): Promise<StoredProfile | null> 
     preferredDistricts: parseList(row.preferredDistricts),
     mustHaveAmenities: parseList(row.mustHaveAmenities),
     workplaceDistrict: row.workplaceDistrict ?? undefined,
+    purpose: row.purpose ?? undefined,
+    propertyType: row.propertyType ?? undefined,
+    budgetMinAed: row.budgetMinAed ?? undefined,
+    budgetMaxAed: row.budgetMaxAed ?? undefined,
+    bedrooms: row.bedrooms ?? undefined,
+    bathrooms: row.bathrooms ?? undefined,
+    minSizeSqm: row.minSizeSqm ?? undefined,
+    lifestylePriorities: parseList(row.lifestylePriorities),
   };
 }
 
@@ -40,6 +48,16 @@ export async function upsertProfile(userId: string, input: ProfileInput): Promis
     preferredDistricts: input.preferredDistricts ? JSON.stringify(input.preferredDistricts) : null,
     mustHaveAmenities: input.mustHaveAmenities ? JSON.stringify(input.mustHaveAmenities) : null,
     workplaceDistrict: input.workplaceDistrict ?? null,
+    purpose: input.purpose ?? null,
+    propertyType: input.propertyType ?? null,
+    budgetMinAed: typeof input.budgetMinAed === 'number' ? Math.round(input.budgetMinAed) : null,
+    budgetMaxAed: typeof input.budgetMaxAed === 'number' ? Math.round(input.budgetMaxAed) : null,
+    bedrooms: typeof input.bedrooms === 'number' ? Math.round(input.bedrooms) : null,
+    bathrooms: typeof input.bathrooms === 'number' ? Math.round(input.bathrooms) : null,
+    minSizeSqm: typeof input.minSizeSqm === 'number' ? Math.round(input.minSizeSqm) : null,
+    lifestylePriorities: input.lifestylePriorities
+      ? JSON.stringify(input.lifestylePriorities)
+      : null,
   };
 
   await getDb().investorProfile.upsert({
