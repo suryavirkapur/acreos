@@ -26,6 +26,7 @@ function createAuth() {
       emailOTP({
         otpLength: 6,
         expiresIn: 60 * 10,
+        resendStrategy: 'reuse',
         async sendVerificationOTP({ email, otp, type }) {
           await sendOtpEmail({ email, otp, type });
         },

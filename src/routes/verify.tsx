@@ -71,6 +71,14 @@ function Verify() {
             </button>
           </p>
 
+          {import.meta.env.DEV && (
+            <p className="mt-3 rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+              Dev tip: if no email arrives, check the terminal running{' '}
+              <code className="font-mono">pnpm dev</code>. Resend sandbox only delivers to the
+              account owner&apos;s email until a domain is verified.
+            </p>
+          )}
+
           {resent && (
             <p className="mt-3 text-sm font-medium text-emerald-700">A new code is on its way.</p>
           )}

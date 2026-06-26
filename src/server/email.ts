@@ -2,7 +2,10 @@ import { Resend } from 'resend';
 
 import { getEnv } from '@/server/env';
 
-const FROM = 'Onboarding <onboarding@znskr.com>';
+function getFromAddress(): string {
+  const env = getEnv();
+  return env.RESEND_FROM_EMAIL ?? 'AcreOS <onboarding@resend.dev>';
+}
 
 let resend: Resend | undefined;
 
@@ -118,23 +121,46 @@ export async function sendOtpEmail({
   otp: string;
   type: OtpType;
 }) {
+  const env = getEnv();
   const client = getResend();
   const copy = otpCopy(type);
 
   if (!client) {
-    console.log(`\n[AcreOS auth] ${type} code for ${email}: ${otp}\n`);
+    console.log(`\n[AcreOS auth] ${type} code for ${email}: ${otp}`);
+    console.log('[AcreOS auth] Set RESEND_API_KEY to deliver codes by email.\n');
     return;
   }
 
-  const { error } = await client.emails.send({
-    from: FROM,
-    to: email,
-    subject: copy.subject,
-    html: otpHtml(otp, copy),
-    text: otpText(otp, copy),
-  });
+  try {
+    const { error } = await client.emails.send({
+      from: getFromAddress(),
+      to: email,
+      subject: copy.subject,
+      html: otpHtml(otp, copy),
+      text: otpText(otp, copy),
+    });
 
-  if (error) {
-    throw new Error(`Failed to send email: ${error.message}`);
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    console.log(`[AcreOS auth] ${type} code emailed to ${email}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to send verification email';
+    console.error('[AcreOS auth] Resend failed:', message);
+
+    if (env.NODE_ENV !== 'production') {
+      console.log(`\n[AcreOS auth] ${type} code for ${email}: ${otp}`);
+      if (message.includes('only send testing emails')) {
+        console.log(
+          '[AcreOS auth] Resend sandbox only delivers to the account owner email until a domain is verified.\n',
+        );
+      } else {
+        console.log('');
+      }
+      return;
+    }
+
+    throw error;
   }
 }
