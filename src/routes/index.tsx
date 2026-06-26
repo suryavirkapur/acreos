@@ -78,9 +78,24 @@ const CAPABILITIES = [
 ];
 
 const MOCK_DEALS = [
-  { name: 'Camden Mews Portfolio', loc: 'London, UK', stage: 'Diligence', value: '$42.0M' },
-  { name: 'Harbor Point Logistics', loc: 'Rotterdam, NL', stage: 'Negotiation', value: '$118.5M' },
-  { name: 'Sunbelt BTR Cluster', loc: 'Austin, TX', stage: 'Sourcing', value: '$73.2M' },
+  {
+    name: 'Marina Gate Residences',
+    loc: 'Dubai Marina, Dubai',
+    stage: 'Diligence',
+    value: 'AED 154.2M',
+  },
+  {
+    name: 'Jebel Ali Logistics Park',
+    loc: 'Jebel Ali, Dubai',
+    stage: 'Negotiation',
+    value: 'AED 435.2M',
+  },
+  {
+    name: 'Saadiyat Beach Villas',
+    loc: 'Saadiyat Island, Abu Dhabi',
+    stage: 'Sourcing',
+    value: 'AED 268.8M',
+  },
 ];
 
 const FAQS = [
@@ -129,7 +144,7 @@ function ProductPreview() {
 
       <div className="grid grid-cols-3 gap-px bg-(--line)">
         {[
-          ['AUM', '$3.24B'],
+          ['AUM', 'AED 11.9B'],
           ['Active deals', '37'],
           ['Avg yield', '7.8%'],
         ].map(([label, value]) => (
@@ -155,7 +170,9 @@ function ProductPreview() {
             <span className="ml-auto rounded-full bg-(--paper-soft) px-2 py-0.5 text-[0.7rem] font-semibold text-(--ink-soft)">
               {deal.stage}
             </span>
-            <span className="w-16 text-right text-sm font-bold text-(--ink)">{deal.value}</span>
+            <span className="w-24 shrink-0 text-right text-sm font-bold text-(--ink)">
+              {deal.value}
+            </span>
           </div>
         ))}
       </div>
@@ -163,7 +180,7 @@ function ProductPreview() {
       <div className="flex items-center gap-2 border-t border-(--line) bg-(--paper)/60 px-4 py-3 text-xs text-(--ink-soft)">
         <Sparkles className="size-3.5 text-(--brand)" />
         <span>
-          <span className="font-semibold text-(--ink)">Diligence agent</span> revised Camden Mews
+          <span className="font-semibold text-(--ink)">Diligence agent</span> revised Marina Gate
           IRR to 14.2%
         </span>
       </div>
