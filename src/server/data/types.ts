@@ -45,6 +45,16 @@ export type Transaction = {
   buyer_type: string;
 };
 
+export type Amenity = {
+  amenity_id: string;
+  category: string;
+  subtype: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  district: string;
+};
+
 export type Community = {
   community_id: string;
   district: string;

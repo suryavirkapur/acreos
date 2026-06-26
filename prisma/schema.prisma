@@ -25,8 +25,28 @@ model User {
   sessions      Session[]
   accounts      Account[]
   conversations Conversation[]
+  profile       InvestorProfile?
 
   @@map("user")
+}
+
+model InvestorProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  investorType       String   @default("retail")
+  budgetAed          Int?
+  capitalRange       String?
+  riskProfile        String?
+  horizon            String?
+  preferredSectors   String?
+  preferredDistricts String?
+  mustHaveAmenities  String?
+  workplaceDistrict  String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("investor_profile")
 }
 
 model Conversation {

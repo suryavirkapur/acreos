@@ -13,6 +13,13 @@ import {
 import { runCopilot } from '@/server/data/copilot';
 import { matchInvestorToParcels } from '@/server/data/matching';
 import { generateDealMemo } from '@/server/data/memo';
+import { getProfile, upsertProfile } from '@/server/data/profile';
+import {
+  AMENITY_CATEGORIES,
+  amenityDensityByDistrict,
+  type ProfileInput,
+  recommendDistricts,
+} from '@/server/data/recommend';
 import {
   capitalSupplyBySector,
   exploreParcels,
@@ -139,9 +146,16 @@ app.post('/intel/copilot', async (c) => {
   const question = typeof body.question === 'string' ? body.question.trim() : '';
   if (!question) return c.json({ error: 'question is required' }, 400);
 
-  const result = await runCopilot(question);
-
   const userId = await getUserId(c);
+
+  let profileContext: string | undefined;
+  if (userId) {
+    const profile = await getProfile(userId).catch(() => null);
+    if (profile) profileContext = JSON.stringify(profile);
+  }
+
+  const result = await runCopilot(question, profileContext);
+
   let conversationId: string | undefined =
     typeof body.conversationId === 'string' ? body.conversationId : undefined;
 
@@ -160,6 +174,46 @@ app.post('/intel/copilot', async (c) => {
   }
 
   return c.json({ ...result, conversationId });
+});
+
+function parseProfile(body: Record<string, unknown>): ProfileInput {
+  const p = (body.profile ?? body) as Record<string, unknown>;
+  const strList = (v: unknown) =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : undefined;
+  return {
+    investorType: p.investorType === 'institutional' ? 'institutional' : 'retail',
+    budgetAed: typeof p.budgetAed === 'number' ? p.budgetAed : undefined,
+    capitalRange: typeof p.capitalRange === 'string' ? p.capitalRange : undefined,
+    riskProfile: typeof p.riskProfile === 'string' ? p.riskProfile : undefined,
+    horizon: typeof p.horizon === 'string' ? p.horizon : undefined,
+    preferredSectors: strList(p.preferredSectors),
+    preferredDistricts: strList(p.preferredDistricts),
+    mustHaveAmenities: strList(p.mustHaveAmenities),
+    workplaceDistrict: typeof p.workplaceDistrict === 'string' ? p.workplaceDistrict : undefined,
+  };
+}
+
+app.get('/intel/amenities', (c) =>
+  c.json({ categories: AMENITY_CATEGORIES, density: amenityDensityByDistrict() }),
+);
+
+app.post('/intel/recommend', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  return c.json({ recommendations: recommendDistricts(parseProfile(body), 6) });
+});
+
+app.get('/intel/profile', async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ profile: null });
+  return c.json({ profile: await getProfile(userId) });
+});
+
+app.put('/intel/profile', async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: 'unauthorized' }, 401);
+  const body = await c.req.json().catch(() => ({}));
+  const profile = await upsertProfile(userId, parseProfile(body));
+  return c.json({ profile, recommendations: recommendDistricts(profile, 6) });
 });
 
 app.get('/intel/conversations', async (c) => {

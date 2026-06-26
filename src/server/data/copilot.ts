@@ -139,21 +139,27 @@ export type CopilotResponse = {
   model: string | null;
 };
 
-export async function runCopilot(question: string): Promise<CopilotResponse> {
+export async function runCopilot(
+  question: string,
+  profileContext?: string,
+): Promise<CopilotResponse> {
   const openai = getOpenAiClient();
   if (!openai) {
     return {
       reply:
-        'The copilot needs OPENAI_API_KEY to be set. Once configured, ask things like ' +
-        '"Where should a balanced fund with 200M-600M deploy capital?"',
+        'The copilot needs GEMINI_API_KEY (or OPENAI_API_KEY) to be set. Once configured, ask ' +
+        'things like "Where should a balanced fund with 200M-600M deploy capital?"',
       toolsUsed: [],
       model: null,
     };
   }
 
   const model = getOpenAiModel();
+  const system = profileContext
+    ? `${SYSTEM_PROMPT}\n\nThe user's investor profile (tailor answers to it): ${profileContext}`
+    : SYSTEM_PROMPT;
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: system },
     { role: 'user', content: question },
   ];
 

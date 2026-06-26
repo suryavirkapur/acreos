@@ -2,7 +2,10 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import {
   ArrowUpRight,
   Bell,
+  Briefcase,
   Building2,
+  Calculator,
+  Check,
   FileText,
   History,
   LayoutDashboard,
@@ -16,6 +19,7 @@ import {
   Sparkles,
   Trash2,
   TrendingUp,
+  UserCircle,
   Users,
   Wallet,
   X,
@@ -35,11 +39,20 @@ export const Route = createFileRoute('/dashboard')({
   component: Dashboard,
 });
 
-const TABS = ['Overview', 'Copilot', 'Opportunities', 'Explore', 'Market', 'Investors'] as const;
+const TABS = [
+  'Overview',
+  'Profile',
+  'Copilot',
+  'Opportunities',
+  'Explore',
+  'Market',
+  'Investors',
+] as const;
 type Tab = (typeof TABS)[number];
 
 const NAV: { label: Tab; icon: typeof LayoutDashboard }[] = [
   { label: 'Overview', icon: LayoutDashboard },
+  { label: 'Profile', icon: UserCircle },
   { label: 'Copilot', icon: Sparkles },
   { label: 'Opportunities', icon: Building2 },
   { label: 'Explore', icon: Search },
@@ -49,11 +62,52 @@ const NAV: { label: Tab; icon: typeof LayoutDashboard }[] = [
 
 const TAB_SUBTITLE: Record<Tab, string> = {
   Overview: 'Grounded in Abu Dhabi parcels, transactions, investors & communities',
+  Profile: 'Tell us how you invest — we tailor everything to it',
   Copilot: 'Ask cross-dataset questions, get cited answers',
   Opportunities: 'Match investor mandates to land parcels',
   Explore: 'Filter and drill into the parcel & transaction data',
   Market: 'District price levels and momentum',
   Investors: 'Active mandates across the UAE',
+};
+
+const AMENITY_CATEGORIES = [
+  'education',
+  'healthcare',
+  'retail',
+  'mobility',
+  'community',
+  'services',
+] as const;
+
+const SECTORS = [
+  'residential',
+  'commercial',
+  'hospitality',
+  'mixed_use',
+  'logistics',
+  'industrial',
+  'community',
+];
+
+type InvestorProfile = {
+  investorType: 'retail' | 'institutional';
+  budgetAed?: number;
+  capitalRange?: string;
+  riskProfile?: string;
+  horizon?: string;
+  preferredSectors?: string[];
+  preferredDistricts?: string[];
+  mustHaveAmenities?: string[];
+  workplaceDistrict?: string;
+};
+
+type Recommendation = {
+  district: string;
+  score: number;
+  estUnitPriceAed: number;
+  grossYieldPct: number;
+  amenityCount: number;
+  reasons: string[];
 };
 
 type Facets = {
@@ -993,6 +1047,430 @@ function Explorer({ facets }: { facets: Facets | null }) {
   );
 }
 
+function DownpaymentCalculator({ initialPrice }: { initialPrice?: number }) {
+  const [price, setPrice] = useState(initialPrice && initialPrice > 0 ? initialPrice : 2_000_000);
+  const [downPct, setDownPct] = useState(20);
+  const [rate, setRate] = useState(4.5);
+  const [years, setYears] = useState(25);
+
+  useEffect(() => {
+    if (initialPrice && initialPrice > 0) setPrice(initialPrice);
+  }, [initialPrice]);
+
+  const downAmount = Math.round((price * downPct) / 100);
+  const loan = Math.max(0, price - downAmount);
+  const monthlyRate = rate / 100 / 12;
+  const n = years * 12;
+  const monthly =
+    monthlyRate > 0
+      ? (loan * monthlyRate * (1 + monthlyRate) ** n) / ((1 + monthlyRate) ** n - 1)
+      : loan / n;
+  const fees = Math.round(price * 0.04); // ~2% transfer + ~2% agency (Abu Dhabi est.)
+  const cashNeeded = downAmount + fees;
+
+  const rows: { label: string; value: string; hint?: string }[] = [
+    { label: 'Downpayment', value: `AED ${AED.format(downAmount)}`, hint: `${downPct}% of price` },
+    { label: 'Loan amount', value: `AED ${AED.format(loan)}` },
+    { label: 'Est. monthly payment', value: `AED ${AED.format(Math.round(monthly))}` },
+    { label: 'Upfront fees (~4%)', value: `AED ${AED.format(fees)}`, hint: 'transfer + agency' },
+    { label: 'Cash needed upfront', value: `AED ${AED.format(cashNeeded)}`, hint: 'down + fees' },
+  ];
+
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center gap-2 space-y-0">
+        <span className="flex size-8 items-center justify-center rounded-lg bg-primary/12 text-primary">
+          <Calculator className="size-4.5" />
+        </span>
+        <div>
+          <CardTitle className="text-base">Downpayment & mortgage calculator</CardTitle>
+          <p className="text-xs text-muted-foreground">UAE estimates — adjust to your situation</p>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <label htmlFor="dp-price" className="block text-xs font-semibold text-muted-foreground">
+          Property price (AED)
+          <Input
+            id="dp-price"
+            type="number"
+            value={price}
+            min={0}
+            step={50000}
+            onChange={(e) => setPrice(Number(e.target.value) || 0)}
+            className="mt-1"
+          />
+        </label>
+
+        <div className="grid grid-cols-3 gap-3">
+          <label htmlFor="dp-down" className="block text-xs font-semibold text-muted-foreground">
+            Down %
+            <Input
+              id="dp-down"
+              type="number"
+              value={downPct}
+              min={0}
+              max={100}
+              onChange={(e) => setDownPct(Number(e.target.value) || 0)}
+              className="mt-1"
+            />
+          </label>
+          <label htmlFor="dp-rate" className="block text-xs font-semibold text-muted-foreground">
+            Rate %
+            <Input
+              id="dp-rate"
+              type="number"
+              value={rate}
+              min={0}
+              step={0.1}
+              onChange={(e) => setRate(Number(e.target.value) || 0)}
+              className="mt-1"
+            />
+          </label>
+          <label htmlFor="dp-years" className="block text-xs font-semibold text-muted-foreground">
+            Years
+            <Input
+              id="dp-years"
+              type="number"
+              value={years}
+              min={1}
+              max={35}
+              onChange={(e) => setYears(Number(e.target.value) || 1)}
+              className="mt-1"
+            />
+          </label>
+        </div>
+
+        <div className="divide-y divide-border rounded-lg border border-border">
+          {rows.map((r) => (
+            <div key={r.label} className="flex items-center justify-between px-4 py-2.5">
+              <span className="text-sm text-muted-foreground">
+                {r.label}
+                {r.hint && <span className="ml-1 text-xs opacity-70">({r.hint})</span>}
+              </span>
+              <span className="font-semibold text-foreground">{r.value}</span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+const CAPITAL_BANDS = ['15M-60M', '50M-200M', '200M-600M', '600M-2.5B', '2.5B-10B'];
+const RISKS = ['conservative', 'balanced', 'aggressive'];
+const HORIZONS = ['short', 'medium', 'long'];
+
+function Chip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+        active
+          ? 'border-primary bg-primary/12 text-primary'
+          : 'border-border text-muted-foreground hover:bg-muted',
+      )}
+    >
+      {active && <Check className="size-3.5" />}
+      {titleCase(label)}
+    </button>
+  );
+}
+
+function ProfilePage({
+  facets,
+  onNavigate,
+}: {
+  facets: Facets | null;
+  onNavigate: (tab: Tab) => void;
+}) {
+  const [profile, setProfile] = useState<InvestorProfile>({ investorType: 'retail' });
+  const [recs, setRecs] = useState<Recommendation[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/intel/profile')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.profile) setProfile(d.profile);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetch('/api/intel/recommend', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(profile),
+      signal: ctrl.signal,
+    })
+      .then((r) => r.json())
+      .then((d) => setRecs(d.recommendations ?? []))
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [profile]);
+
+  function update(patch: Partial<InvestorProfile>) {
+    setProfile((p) => ({ ...p, ...patch }));
+    setSaved(false);
+  }
+
+  function toggleIn(key: 'mustHaveAmenities' | 'preferredSectors' | 'preferredDistricts', value: string) {
+    setProfile((p) => {
+      const current = p[key] ?? [];
+      const next = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      return { ...p, [key]: next };
+    });
+    setSaved(false);
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/intel/profile', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(profile),
+      });
+      const data = await res.json();
+      if (data.recommendations) setRecs(data.recommendations);
+      setSaved(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const isRetail = profile.investorType === 'retail';
+  const districts = facets?.districts ?? [];
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-3">
+      <div className="space-y-6 xl:col-span-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Your investing profile</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              We use this to personalize matches, recommendations, and the copilot.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">I am a…</p>
+              <div className="grid grid-cols-2 gap-3">
+                {(['retail', 'institutional'] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => update({ investorType: type })}
+                    className={cn(
+                      'rounded-xl border p-4 text-left transition-colors',
+                      profile.investorType === type
+                        ? 'border-primary bg-primary/8'
+                        : 'border-border hover:bg-muted',
+                    )}
+                  >
+                    <div className="flex items-center gap-2 font-semibold text-foreground">
+                      {type === 'retail' ? (
+                        <UserCircle className="size-4.5 text-primary" />
+                      ) : (
+                        <Building2 className="size-4.5 text-primary" />
+                      )}
+                      {type === 'retail' ? 'Retail investor' : 'Institutional investor'}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {type === 'retail'
+                        ? 'Buying a home or a few units; care about commute & amenities.'
+                        : 'Deploying a mandate across assets; care about yield & strategy.'}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {isRetail ? (
+              <>
+                <label htmlFor="pf-budget" className="block text-xs font-semibold text-muted-foreground">
+                  Budget (AED)
+                  <Input
+                    id="pf-budget"
+                    type="number"
+                    value={profile.budgetAed ?? ''}
+                    placeholder="2,000,000"
+                    min={0}
+                    step={50000}
+                    onChange={(e) => update({ budgetAed: Number(e.target.value) || undefined })}
+                    className="mt-1 max-w-xs"
+                  />
+                </label>
+
+                <label className="block text-xs font-semibold text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Briefcase className="size-3.5" /> Workplace district (for commute)
+                  </span>
+                  <select
+                    value={profile.workplaceDistrict ?? ''}
+                    onChange={(e) => update({ workplaceDistrict: e.target.value || undefined })}
+                    className="mt-1 h-9 w-full max-w-xs rounded-md border border-border bg-background px-3 text-sm text-foreground"
+                  >
+                    <option value="">Select district</option>
+                    {districts.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-muted-foreground">
+                    Must-have amenities nearby
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {AMENITY_CATEGORIES.map((cat) => (
+                      <Chip
+                        key={cat}
+                        label={cat}
+                        active={profile.mustHaveAmenities?.includes(cat) ?? false}
+                        onClick={() => toggleIn('mustHaveAmenities', cat)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <label className="block text-xs font-semibold text-muted-foreground">
+                  Capital range (AED)
+                  <select
+                    value={profile.capitalRange ?? ''}
+                    onChange={(e) => update({ capitalRange: e.target.value || undefined })}
+                    className="mt-1 h-9 w-full max-w-xs rounded-md border border-border bg-background px-3 text-sm text-foreground"
+                  >
+                    <option value="">Select band</option>
+                    {CAPITAL_BANDS.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-muted-foreground">Target sectors</p>
+                  <div className="flex flex-wrap gap-2">
+                    {SECTORS.map((s) => (
+                      <Chip
+                        key={s}
+                        label={s}
+                        active={profile.preferredSectors?.includes(s) ?? false}
+                        onClick={() => toggleIn('preferredSectors', s)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-xs font-semibold text-muted-foreground">
+                Risk profile
+                <select
+                  value={profile.riskProfile ?? ''}
+                  onChange={(e) => update({ riskProfile: e.target.value || undefined })}
+                  className="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
+                >
+                  <option value="">Select</option>
+                  {RISKS.map((r) => (
+                    <option key={r} value={r}>
+                      {titleCase(r)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-xs font-semibold text-muted-foreground">
+                Investment horizon
+                <select
+                  value={profile.horizon ?? ''}
+                  onChange={(e) => update({ horizon: e.target.value || undefined })}
+                  className="mt-1 h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground"
+                >
+                  <option value="">Select</option>
+                  {HORIZONS.map((h) => (
+                    <option key={h} value={h}>
+                      {titleCase(h)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button onClick={save} disabled={saving}>
+                {saved ? <Check className="size-4" /> : null}
+                {saving ? 'Saving…' : saved ? 'Saved' : 'Save profile'}
+              </Button>
+              <Button variant="ghost" onClick={() => onNavigate('Copilot')}>
+                Ask the copilot with this profile
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <DownpaymentCalculator initialPrice={isRetail ? profile.budgetAed : undefined} />
+      </div>
+
+      <Card className="h-fit">
+        <CardHeader>
+          <CardTitle className="text-base">Recommended for you</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {isRetail
+              ? 'Districts by amenities, commute & affordability'
+              : 'Districts by yield, infrastructure & amenities'}
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-2.5">
+          {recs.map((r, i) => (
+            <div key={r.district} className="rounded-lg border border-border bg-muted/30 p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="flex size-5 items-center justify-center rounded-full bg-primary/12 text-xs font-bold text-primary">
+                    {i + 1}
+                  </span>
+                  <span className="font-semibold text-foreground">{r.district}</span>
+                </div>
+                <Badge variant="success">{r.score}</Badge>
+              </div>
+              <p className="mt-1.5 text-xs text-muted-foreground">{r.reasons.join(' · ')}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                ~{aedShort(r.estUnitPriceAed)} typical unit · {r.grossYieldPct}% yield ·{' '}
+                {r.amenityCount} amenities
+              </p>
+            </div>
+          ))}
+          {recs.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Fill in your profile to see recommendations.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function OverviewPage({
   data,
   onNavigate,
@@ -1420,6 +1898,8 @@ function Dashboard() {
 
         <main className="flex-1 space-y-6 px-5 py-6 sm:px-8">
           {tab === 'Overview' && <OverviewPage data={data} onNavigate={setTab} />}
+
+          {tab === 'Profile' && <ProfilePage facets={facets} onNavigate={setTab} />}
 
           {tab === 'Copilot' && (
             <div className="mx-auto max-w-3xl">

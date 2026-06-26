@@ -1,7 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import type { Community, District, Investor, Parcel, Transaction } from '@/server/data/types';
+import type {
+  Amenity,
+  Community,
+  District,
+  Investor,
+  Parcel,
+  Transaction,
+} from '@/server/data/types';
 
 /**
  * Minimal CSV parser. Handles quoted fields with embedded commas/quotes.
@@ -82,6 +89,7 @@ export type DataStore = {
   investors: Investor[];
   transactions: Transaction[];
   communities: Community[];
+  amenities: Amenity[];
 };
 
 let store: DataStore | undefined;
@@ -147,6 +155,16 @@ export function getDataStore(): DataStore {
     optimization_opportunity: r.optimization_opportunity,
   }));
 
-  store = { districts, parcels, investors, transactions, communities };
+  const amenities: Amenity[] = loadCsv('osm_amenities.csv').map((r) => ({
+    amenity_id: r.amenity_id,
+    category: r.category,
+    subtype: r.subtype,
+    name: r.name,
+    latitude: num(r.latitude),
+    longitude: num(r.longitude),
+    district: r.district,
+  }));
+
+  store = { districts, parcels, investors, transactions, communities, amenities };
   return store;
 }
