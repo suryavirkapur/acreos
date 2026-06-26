@@ -293,12 +293,33 @@ function UserMenu({ email, onSignOut }: { email: string; onSignOut: () => void }
   );
 }
 
-const SUGGESTED = [
-  'I work in ADGM and have a budget of AED 2M. I want a 2 bedroom apartment near restaurants with good rental yield. Which districts should I consider?',
-  'Where should a balanced fund with AED 200M-600M deploy capital this quarter?',
-  'Which districts have the strongest price momentum?',
-  'What are the top vacant parcels in Saadiyat Island?',
-];
+const EXAMPLE_QUESTIONS = [
+  {
+    label: 'ADGM · 2BR apartment · AED 2M',
+    question:
+      'I work in ADGM and have a budget of AED 2M. I want a 2 bedroom apartment near restaurants with good rental yield. Which districts should I consider?',
+  },
+  {
+    label: 'Fund deployment · AED 200M–600M',
+    question: 'Where should a balanced fund with AED 200M-600M deploy capital this quarter?',
+  },
+  {
+    label: 'District price momentum',
+    question: 'Which districts have the strongest price momentum?',
+  },
+  {
+    label: 'Vacant parcels · Saadiyat',
+    question: 'What are the top vacant parcels in Saadiyat Island?',
+  },
+  {
+    label: 'Investor capital by sector',
+    question: 'Where is investor capital concentrated by sector?',
+  },
+  {
+    label: 'Service demand hotspots',
+    question: 'Which districts have the highest unmet community service demand?',
+  },
+] as const;
 
 type ConversationMeta = { id: string; title: string; updatedAt: string };
 
@@ -386,6 +407,14 @@ function Copilot() {
     }
   }
 
+  function tryExample(question: string) {
+    if (loading) return;
+    setInput(question);
+    window.setTimeout(() => {
+      void ask(question);
+    }, 120);
+  }
+
   return (
     <Card className="flex h-[640px] flex-col" id="copilot">
       <CardHeader className="flex-row items-center justify-between space-y-0 border-b border-border">
@@ -458,23 +487,11 @@ function Copilot() {
 
       <CardContent ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto py-4">
         {turns.length === 0 && (
-          <div className="space-y-3">
+          <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Ask a capital-allocation question. The copilot queries the real Abu Dhabi datasets and
-              cites its sources.
+              Ask about districts, listings, investor mandates, or your own preferences. Pick an example
+              below the chat to get started.
             </p>
-            <div className="flex flex-col gap-2">
-              {SUGGESTED.map((q) => (
-                <button
-                  key={q}
-                  type="button"
-                  onClick={() => ask(q)}
-                  className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted"
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
           </div>
         )}
 
@@ -524,6 +541,23 @@ function Copilot() {
       </CardContent>
 
       <div className="border-t border-border p-3">
+        <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          Example questions
+        </p>
+        <div className="mb-3 flex flex-wrap gap-2">
+          {EXAMPLE_QUESTIONS.map((example) => (
+            <button
+              key={example.label}
+              type="button"
+              title={example.question}
+              disabled={loading}
+              onClick={() => tryExample(example.question)}
+              className="rounded-full border border-border bg-muted/40 px-3 py-1.5 text-left text-xs font-medium text-foreground transition-colors hover:border-primary/30 hover:bg-primary/8 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {example.label}
+            </button>
+          ))}
+        </div>
         <form
           onSubmit={(e) => {
             e.preventDefault();
