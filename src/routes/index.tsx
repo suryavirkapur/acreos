@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from '@tanstack/react-router';
 import {
   ArrowRight,
+  ArrowUpRight,
   Building2,
   ChevronDown,
   FileSearch,
@@ -11,7 +12,7 @@ import {
   Sparkles,
   Waves,
 } from 'lucide-react';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 
 export const Route = createFileRoute('/')({
   ssr: true,
@@ -98,48 +99,66 @@ const MOCK_DEALS = [
   },
 ];
 
-const MANIFESTO: {
-  kicker: string;
-  title: string;
-  body: string;
-  chips?: string[];
-  image: string;
-  imageAlt: string;
-  badge: string;
+const SHOWCASE: {
+  titlePlain: string;
+  titleAccent: string;
+  mockup: 'sourcing' | 'underwriting' | 'portfolio';
+  bubble: string;
+  lead: string;
+  body: ReactNode;
+  bestFor: string;
+  cta: string;
 }[] = [
   {
-    kicker: 'The platform',
-    title: 'Agents are the primary users',
-    body: 'They are aware of everything happening across the investment workflow — and they coordinate with each other, generate interfaces for you, and take action across the full lifecycle of a deal.',
-    chips: [
-      'Listings',
-      'Broker threads',
-      'Legal docs',
-      'Valuation models',
-      'Mortgage terms',
-      'Rental comps',
-      'Market data',
-      'Portfolio performance',
-    ],
-    image: '/corgi-hero.png',
-    imageAlt: 'AcreOS agent mascot working the phones on a live deal',
-    badge: '5 agents active',
+    titlePlain: 'Get deals sourced instantly or',
+    titleAccent: 'hand agents your mandate',
+    mockup: 'sourcing',
+    bubble: 'Triaged 12 today',
+    lead: 'Agents are the primary users of AcreOS.',
+    body: (
+      <>
+        They scan brokers, portals, and off-market channels around the clock, then{' '}
+        <strong className="font-semibold text-(--ink)">triage exactly what fits your mandate</strong>{' '}
+        — coordinating with each other and looping you in only when judgment is needed.
+      </>
+    ),
+    bestFor:
+      'Investors who want always-on sourcing without drowning in broker threads and portal noise.',
+    cta: 'See sourcing',
   },
   {
-    kicker: 'The runtime',
-    title: 'Agents drive work, not conversation',
-    body: 'A deal unfolds over weeks or months across dozens of decision points. Our runtime reacts as the world moves — a price changes, comps shift, a document arrives, rates move — picking work back up and looping you in exactly when needed.',
-    image: '/hand-halftone.png',
-    imageAlt: 'Halftone illustration of a hand, representing human judgment in the loop',
-    badge: 'Always on',
+    titlePlain: 'Underwrite in minutes, not weeks —',
+    titleAccent: 'kept live as the world moves',
+    mockup: 'underwriting',
+    bubble: 'Re-ran IRR',
+    lead: 'Agents drive work, not conversation.',
+    body: (
+      <>
+        A deal unfolds across dozens of decision points. The runtime reacts as prices change, comps
+        shift, and <strong className="font-semibold text-(--ink)">interest rates move</strong> —
+        re-running valuation models and pushing every deal forward.
+      </>
+    ),
+    bestFor:
+      'Teams that need institutional-grade diligence that updates itself instead of going stale in a spreadsheet.',
+    cta: 'See underwriting',
   },
   {
-    kicker: 'End to end',
-    title: 'We are the workflow, not SaaS bolted on',
-    body: 'Every deal reviewed, document analyzed, and outcome recorded deepens a base of institutional knowledge that compounds over time. As models improve, the platform gets sharper — and you make better decisions.',
-    image: '/clouds-bg.png',
-    imageAlt: 'Soft clouds over open sky, evoking compounding scale',
-    badge: 'Compounding',
+    titlePlain: 'Manage the whole portfolio or',
+    titleAccent: 'let agents run it end to end',
+    mockup: 'portfolio',
+    bubble: '+2.3% this week',
+    lead: 'We are the workflow, not SaaS bolted on.',
+    body: (
+      <>
+        Leasing, maintenance, and reporting are handled in one place. Every outcome recorded{' '}
+        <strong className="font-semibold text-(--ink)">compounds into institutional knowledge</strong>
+        , so the platform gets sharper as your portfolio grows.
+      </>
+    ),
+    bestFor:
+      'Owners who want sourcing, execution, and management in a single runtime instead of a stack of tools.',
+    cta: 'See the platform',
   },
 ];
 
@@ -233,44 +252,202 @@ function ProductPreview() {
   );
 }
 
-function StoryRow({
-  kicker,
-  title,
-  body,
-  chips,
-  image,
-  imageAlt,
-  badge,
-  flip,
-}: (typeof MANIFESTO)[number] & { flip: boolean }) {
+function MockChrome({ label, pill }: { label: string; pill?: ReactNode }) {
   return (
-    <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-      <div className={`story-visual ${flip ? 'lg:order-2' : ''}`}>
-        <img src={image} alt={imageAlt} loading="lazy" />
-        <span className="story-badge">
-          <Sparkles className="size-3.5" />
-          {badge}
+    <div className="flex items-center gap-2 border-b border-(--line) px-4 py-3">
+      <span className="size-2.5 rounded-full bg-(--brand)" />
+      <span className="size-2.5 rounded-full bg-(--ink-faint)/40" />
+      <span className="size-2.5 rounded-full bg-(--ink-faint)/40" />
+      <span className="ml-2 truncate text-xs font-semibold text-(--ink-soft)">{label}</span>
+      {pill && <span className="ml-auto shrink-0">{pill}</span>}
+    </div>
+  );
+}
+
+function MockFooter({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 border-t border-(--line) bg-(--paper)/60 px-4 py-2.5 text-[0.72rem] text-(--ink-soft)">
+      <Sparkles className="size-3 shrink-0 text-(--brand)" />
+      <span className="truncate">{children}</span>
+    </div>
+  );
+}
+
+function SourcingMock() {
+  const rows: [string, string, string, boolean][] = [
+    ['Broker', 'Marina Gate Residences', 'Fits mandate', true],
+    ['Portal', 'Jebel Ali Logistics Park', 'Reviewing', false],
+    ['Off-market', 'Saadiyat Beach Villas', 'New', false],
+  ];
+  return (
+    <>
+      <MockChrome
+        label="AcreOS · Inbound deals"
+        pill={
+          <span className="inline-flex items-center gap-1 rounded-full bg-(--brand-soft) px-2 py-0.5 text-[0.65rem] font-bold text-(--brand-deep)">
+            <span className="size-1.5 rounded-full bg-(--brand)" />
+            Live
+          </span>
+        }
+      />
+      <div>
+        {rows.map(([src, name, chip, hot]) => (
+          <div key={name} className="mock-row flex items-center gap-2.5 px-4 py-2.5">
+            <span className="rounded-md bg-(--paper-soft) px-1.5 py-0.5 text-[0.6rem] font-bold tracking-wide text-(--ink-soft) uppercase">
+              {src}
+            </span>
+            <p className="min-w-0 flex-1 truncate text-[0.8rem] font-semibold text-(--ink)">{name}</p>
+            <span
+              className={`shrink-0 rounded-full px-2 py-0.5 text-[0.62rem] font-bold ${
+                hot ? 'bg-(--brand-soft) text-(--brand-deep)' : 'bg-(--paper-soft) text-(--ink-soft)'
+              }`}
+            >
+              {chip}
+            </span>
+          </div>
+        ))}
+      </div>
+      <MockFooter>
+        <span className="font-semibold text-(--ink)">Sourcing agent</span> triaged 12 deals today
+      </MockFooter>
+    </>
+  );
+}
+
+function UnderwritingMock() {
+  return (
+    <>
+      <MockChrome
+        label="Marina Gate · Underwriting"
+        pill={
+          <span className="inline-flex items-center gap-1 rounded-full bg-(--brand-soft) px-2 py-0.5 text-[0.65rem] font-bold text-(--brand-deep)">
+            <Sparkles className="size-2.5" />
+            Re-running
+          </span>
+        }
+      />
+      <div className="grid grid-cols-3 gap-px bg-(--line)">
+        {[
+          ['Purchase', 'AED 154M'],
+          ['Rent / yr', 'AED 12.3M'],
+          ['Cap rate', '6.4%'],
+        ].map(([label, value]) => (
+          <div key={label} className="bg-(--card) px-3 py-2.5">
+            <p className="text-[0.58rem] font-semibold tracking-wide text-(--ink-faint) uppercase">
+              {label}
+            </p>
+            <p className="mt-0.5 text-[0.82rem] font-extrabold text-(--ink)">{value}</p>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-end justify-between px-4 py-3">
+        <div>
+          <p className="text-[0.6rem] font-semibold tracking-wide text-(--ink-faint) uppercase">
+            Projected IRR
+          </p>
+          <p className="font-serif text-3xl font-semibold text-(--ink)">14.2%</p>
+        </div>
+        <span className="inline-flex items-center gap-1 rounded-full bg-(--brand-soft) px-2 py-0.5 text-[0.66rem] font-bold text-(--brand-deep)">
+          <ArrowUpRight className="size-3" />
+          1.8%
         </span>
       </div>
+      <MockFooter>Rates moved +0.25% → IRR re-modeled live</MockFooter>
+    </>
+  );
+}
 
-      <div className={flip ? 'lg:order-1' : ''}>
-        <p className="island-kicker mb-3">{kicker}</p>
-        <h3 className="font-serif text-3xl font-semibold tracking-tight text-(--ink) sm:text-4xl">
-          {title}
-        </h3>
-        <p className="mt-4 text-lg/8 text-(--ink-soft)">{body}</p>
-        {chips && (
-          <ul className="mt-6 flex flex-wrap gap-2">
-            {chips.map((chip) => (
-              <li
-                key={chip}
-                className="rounded-full bg-(--paper-soft) px-3 py-1 text-sm font-semibold text-(--ink-soft)"
-              >
-                {chip}
-              </li>
-            ))}
-          </ul>
-        )}
+function PortfolioMock() {
+  const bars = [38, 52, 44, 61, 70, 58, 82];
+  return (
+    <>
+      <MockChrome
+        label="AcreOS · Portfolio"
+        pill={
+          <span className="rounded-full bg-(--brand-soft) px-2 py-0.5 text-[0.65rem] font-bold text-(--brand-deep)">
+            37 assets
+          </span>
+        }
+      />
+      <div className="grid grid-cols-2 gap-px bg-(--line)">
+        {[
+          ['AUM', 'AED 11.9B'],
+          ['Avg yield', '7.8%'],
+        ].map(([label, value]) => (
+          <div key={label} className="bg-(--card) px-3 py-2.5">
+            <p className="text-[0.58rem] font-semibold tracking-wide text-(--ink-faint) uppercase">
+              {label}
+            </p>
+            <p className="mt-0.5 text-[0.82rem] font-extrabold text-(--ink)">{value}</p>
+          </div>
+        ))}
+      </div>
+      <div className="px-4 py-3">
+        <p className="mb-2 text-[0.6rem] font-semibold tracking-wide text-(--ink-faint) uppercase">
+          NOI · last 7 months
+        </p>
+        <div className="mock-bars">
+          {bars.map((h) => (
+            <span key={h} style={{ height: `${h}%` }} />
+          ))}
+        </div>
+      </div>
+      <MockFooter>
+        <span className="font-semibold text-(--ink)">Saadiyat Villas</span> leased · +AED 2.1M / yr
+      </MockFooter>
+    </>
+  );
+}
+
+const MOCKS = {
+  sourcing: SourcingMock,
+  underwriting: UnderwritingMock,
+  portfolio: PortfolioMock,
+};
+
+function ProductShowcase({
+  titlePlain,
+  titleAccent,
+  mockup,
+  bubble,
+  lead,
+  body,
+  bestFor,
+  cta,
+  flip,
+}: (typeof SHOWCASE)[number] & { flip: boolean }) {
+  const Mock = MOCKS[mockup];
+  return (
+    <div>
+      <h3 className="max-w-3xl font-serif text-3xl leading-tight font-semibold tracking-tight text-(--ink) sm:text-4xl">
+        {titlePlain} <span className="text-(--brand)">{titleAccent}</span>
+      </h3>
+
+      <div className="mt-8 grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+        <div className={`showcase-stage ${flip ? 'lg:order-2' : ''}`}>
+          <div className="showcase-ui">
+            <Mock />
+          </div>
+          <span className="showcase-bubble">{bubble}</span>
+          <img
+            src="/corgi-hero.png"
+            alt=""
+            aria-hidden="true"
+            className="showcase-mascot"
+            loading="lazy"
+          />
+        </div>
+
+        <div className={flip ? 'lg:order-1' : ''}>
+          <p className="text-lg font-extrabold text-(--ink)">{lead}</p>
+          <p className="mt-3 text-base/7 text-(--ink-soft)">{body}</p>
+          <p className="mt-6 font-bold text-(--ink)">Best for:</p>
+          <p className="mt-1 text-base/7 text-(--ink-soft)">{bestFor}</p>
+          <Link to="/login" className="btn-ink mt-7">
+            {cta}
+            <ArrowRight className="size-4" />
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -498,8 +675,8 @@ function App() {
         </div>
 
         <div className="mt-16 space-y-20 lg:mt-20 lg:space-y-28">
-          {MANIFESTO.map((row, index) => (
-            <StoryRow key={row.title} {...row} flip={index % 2 === 1} />
+          {SHOWCASE.map((item, index) => (
+            <ProductShowcase key={item.titleAccent} {...item} flip={index % 2 === 1} />
           ))}
         </div>
       </section>
