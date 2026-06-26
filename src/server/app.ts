@@ -14,6 +14,7 @@ import { matchBestForProfile } from '@/server/data/best-match';
 import { runCopilot } from '@/server/data/copilot';
 import { matchInvestorToParcels } from '@/server/data/matching';
 import { generateDealMemo } from '@/server/data/memo';
+import { getDailyMarketNews } from '@/server/data/news';
 import { getProfile, upsertProfile } from '@/server/data/profile';
 import {
   AMENITY_CATEGORIES,
@@ -87,6 +88,19 @@ app.get('/intel/summary', (c) => {
 
 app.get('/intel/investors', (c) => {
   return c.json({ investors: listInvestors() });
+});
+
+app.get('/intel/news', async (c) => {
+  const force = c.req.query('refresh') === '1';
+  try {
+    return c.json(await getDailyMarketNews(force));
+  } catch (error) {
+    console.error('failed to load market news', error);
+    return c.json(
+      { generatedAt: new Date().toISOString(), model: null, grounded: false, news: [], actions: [] },
+      200,
+    );
+  }
 });
 
 function parseFilter(body: Record<string, unknown>): ParcelFilter {
