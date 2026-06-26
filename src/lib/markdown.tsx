@@ -2,13 +2,23 @@ import type { ReactNode } from 'react';
 
 /** Renders inline **bold** spans within a line. */
 function inline(text: string, keyPrefix: string): ReactNode[] {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return (
         <strong key={`${keyPrefix}-b-${index}`} className="font-semibold text-foreground">
           {part.slice(2, -2)}
         </strong>
+      );
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return (
+        <code
+          key={`${keyPrefix}-c-${index}`}
+          className="rounded bg-muted px-1 py-0.5 font-mono text-[0.85em] text-foreground"
+        >
+          {part.slice(1, -1)}
+        </code>
       );
     }
     return <span key={`${keyPrefix}-t-${index}`}>{part}</span>;

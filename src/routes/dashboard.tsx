@@ -294,10 +294,10 @@ function UserMenu({ email, onSignOut }: { email: string; onSignOut: () => void }
 }
 
 const SUGGESTED = [
+  'I work in ADGM and have a budget of AED 2M. I want a 2 bedroom apartment near restaurants with good rental yield. Which districts should I consider?',
   'Where should a balanced fund with AED 200M-600M deploy capital this quarter?',
   'Which districts have the strongest price momentum?',
   'What are the top vacant parcels in Saadiyat Island?',
-  'Where is investor capital concentrated by sector?',
 ];
 
 type ConversationMeta = { id: string; title: string; updatedAt: string };

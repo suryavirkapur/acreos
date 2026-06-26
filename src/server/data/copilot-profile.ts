@@ -169,10 +169,54 @@ export function formatBestMatchReply(matches: PropertyMatch[], profile: ProfileI
     );
   }
 
-  const lines: string[] = ['## Ranked recommendations', ''];
+  const profileBits: string[] = [];
+  if (profile.workplaceDistrict) profileBits.push(`workplace in ${profile.workplaceDistrict}`);
+  if (profile.budgetMaxAed) profileBits.push(`budget up to ${formatAed(profile.budgetMaxAed)}`);
+  if (profile.propertyType) profileBits.push(`${profile.propertyType}`);
+  if (profile.bedrooms) profileBits.push(`${profile.bedrooms} bedrooms`);
+  if (profile.lifestylePriorities?.length) {
+    profileBits.push(`priorities: ${profile.lifestylePriorities.join(', ')}`);
+  }
 
+  const districtRank = new Map<string, { bestScore: number; count: number }>();
+  for (const match of matches) {
+    const current = districtRank.get(match.district);
+    if (!current) {
+      districtRank.set(match.district, { bestScore: match.score, count: 1 });
+    } else {
+      districtRank.set(match.district, {
+        bestScore: Math.max(current.bestScore, match.score),
+        count: current.count + 1,
+      });
+    }
+  }
+
+  const rankedDistricts = [...districtRank.entries()]
+    .map(([district, stats]) => ({ district, ...stats }))
+    .toSorted((a, b) => b.bestScore - a.bestScore);
+
+  const lines: string[] = [];
+
+  lines.push(
+    profileBits.length > 0
+      ? `Based on your preferences (${profileBits.join('; ')}), here are ranked districts and matching listings from Abu Dhabi transaction data.`
+      : 'Here are ranked districts and matching listings from Abu Dhabi transaction data.',
+  );
+  lines.push('');
+
+  lines.push('## Districts to consider');
+  rankedDistricts.forEach((row, index) => {
+    lines.push(
+      `${index + 1}. **${row.district}** — best match **${row.bestScore}/100** (${row.count} listing${row.count === 1 ? '' : 's'})`,
+    );
+  });
+  lines.push('');
+
+  lines.push('## Top property listings');
   matches.forEach((match, index) => {
+    const listingLabel = match.kind === 'transaction' ? 'Transaction' : 'Parcel';
     lines.push(`### ${index + 1}. ${match.district} — **${match.score}/100**`);
+    lines.push(`- **Listing:** ${listingLabel} \`${match.id}\``);
     if (match.propertyType) lines.push(`- **Property type:** ${match.propertyType}`);
     if (match.priceAed != null) lines.push(`- **Price:** ${formatAed(match.priceAed)}`);
     if (match.sizeSqm != null) lines.push(`- **Size:** ${match.sizeSqm} sqm`);
@@ -190,25 +234,9 @@ export function formatBestMatchReply(matches: PropertyMatch[], profile: ProfileI
     lines.push('');
   });
 
-  const profileBits: string[] = [];
-  if (profile.workplaceDistrict) profileBits.push(`workplace ${profile.workplaceDistrict}`);
-  if (profile.budgetMaxAed) profileBits.push(`budget up to ${formatAed(profile.budgetMaxAed)}`);
-  if (profile.propertyType) profileBits.push(profile.propertyType);
-  if (profile.bedrooms) profileBits.push(`${profile.bedrooms} bedrooms`);
-  if (profile.lifestylePriorities?.length) {
-    profileBits.push(`priorities: ${profile.lifestylePriorities.join(', ')}`);
-  }
-
-  lines.push('## Summary');
-  lines.push(
-    profileBits.length > 0
-      ? `Based on your preferences (${profileBits.join('; ')}), these are the top deterministic matches from Abu Dhabi transaction and parcel data.`
-      : 'These are the top deterministic matches from Abu Dhabi transaction and parcel data.',
-  );
-  lines.push('');
   lines.push('## Next action');
   lines.push(
-    'Open the **Best Match** tab to save these preferences, compare scores in detail, or ask me for comps in a specific district.',
+    'Open the **Best Match** tab to save these preferences and refine filters, or ask me for comps in a specific district.',
   );
   lines.push('');
   lines.push(

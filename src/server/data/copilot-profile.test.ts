@@ -52,7 +52,8 @@ function testFormattedReply() {
   const matches = matchBestForProfile(profile, 5);
   const reply = formatBestMatchReply(matches, profile);
 
-  assert.match(reply, /## Ranked recommendations/);
+  assert.match(reply, /## Districts to consider/);
+  assert.match(reply, /## Top property listings/);
   assert.match(reply, /\/100\*\*/);
   assert.match(reply, /## Next action/);
   assert.match(reply, /Sources:/);
