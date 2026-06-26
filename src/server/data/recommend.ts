@@ -9,6 +9,19 @@ export const AMENITY_CATEGORIES = [
   'services',
 ] as const;
 
+/**
+ * User-tunable weights for the "Recommended for you" ranking.
+ * Retail uses amenity/commute/affordability; institutional uses amenity/yield/infrastructure.
+ * Values are relative and normalized at scoring time, so they need not sum to 1.
+ */
+export type ScoringWeights = {
+  amenity?: number;
+  commute?: number;
+  affordability?: number;
+  yield?: number;
+  infrastructure?: number;
+};
+
 export type ProfileInput = {
   investorType: 'retail' | 'institutional';
   budgetAed?: number;
@@ -27,7 +40,40 @@ export type ProfileInput = {
   bathrooms?: number;
   minSizeSqm?: number;
   lifestylePriorities?: string[];
+  scoringWeights?: ScoringWeights;
 };
+
+export const DEFAULT_RETAIL_WEIGHTS = { amenity: 0.4, commute: 0.35, affordability: 0.25 } as const;
+export const DEFAULT_INSTITUTIONAL_WEIGHTS = {
+  amenity: 0.25,
+  yield: 0.45,
+  infrastructure: 0.3,
+} as const;
+
+/**
+ * Resolves the three relevant weights for the investor type, falling back to defaults
+ * for missing/invalid values and normalizing so they sum to 1.
+ */
+export function resolveScoringWeights<K extends string>(
+  defaults: Record<K, number>,
+  weights?: ScoringWeights,
+): Record<K, number> {
+  const keys = Object.keys(defaults) as K[];
+  const raw = {} as Record<K, number>;
+  let sum = 0;
+  for (const key of keys) {
+    const candidate = weights?.[key as keyof ScoringWeights];
+    const value = typeof candidate === 'number' && Number.isFinite(candidate) && candidate >= 0
+      ? candidate
+      : defaults[key];
+    raw[key] = value;
+    sum += value;
+  }
+  if (sum <= 0) return { ...defaults };
+  const normalized = {} as Record<K, number>;
+  for (const key of keys) normalized[key] = raw[key] / sum;
+  return normalized;
+}
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -91,6 +137,13 @@ export function recommendDistricts(profile: ProfileInput, limit = 6): DistrictRe
 
   const maxYield = Math.max(...districts.map((d) => d.gross_yield_pct));
 
+  const isRetail = profile.investorType === 'retail';
+  const retailWeights = resolveScoringWeights(DEFAULT_RETAIL_WEIGHTS, profile.scoringWeights);
+  const institutionalWeights = resolveScoringWeights(
+    DEFAULT_INSTITUTIONAL_WEIGHTS,
+    profile.scoringWeights,
+  );
+
   const results: DistrictRecommendation[] = districts.map((d) => {
     const dens = densityByName.get(d.district);
     const reasons: string[] = [];
@@ -140,11 +193,14 @@ export function recommendDistricts(profile: ProfileInput, limit = 6): DistrictRe
       reasons.push('preferred district');
     }
 
-    // Weighted total by investor type.
-    const score =
-      profile.investorType === 'retail'
-        ? amenityScore * 0.4 + proximityScore * 0.35 + affordabilityScore * 0.25
-        : amenityScore * 0.25 + yieldScore * 0.45 + (d.infrastructure_score / 100) * 100 * 0.3;
+    // Weighted total by investor type, using user-tunable (normalized) weights.
+    const score = isRetail
+      ? amenityScore * retailWeights.amenity +
+        proximityScore * retailWeights.commute +
+        affordabilityScore * retailWeights.affordability
+      : amenityScore * institutionalWeights.amenity +
+        yieldScore * institutionalWeights.yield +
+        d.infrastructure_score * institutionalWeights.infrastructure;
 
     const preferBonus = profile.preferredDistricts?.includes(d.district) ? 8 : 0;
 

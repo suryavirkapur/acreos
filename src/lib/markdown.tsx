@@ -100,14 +100,16 @@ export function Markdown({ content }: { content: string }) {
         index++;
       }
       const body = buf.join('\n');
+      // Render as a chart whenever the body parses to a valid chart spec —
+      // models frequently forget the `chart` tag or pretty-print the JSON.
+      const spec = parseChartSpec(safeJson(body));
+      if (spec) {
+        blocks.push(<Chart key={`chart-${index}`} spec={spec} />);
+        continue;
+      }
       if (lang === 'chart' || lang === 'json') {
-        const node = (lang === 'chart' ? true : parseChartSpec(safeJson(body)) != null)
-          ? <ChartBlock key={`chart-${index}`} json={body} keyId={`chart-${index}`} />
-          : null;
-        if (node) {
-          blocks.push(node);
-          continue;
-        }
+        blocks.push(<ChartBlock key={`chart-${index}`} json={body} keyId={`chart-${index}`} />);
+        continue;
       }
       blocks.push(
         <pre
@@ -151,9 +153,67 @@ export function Markdown({ content }: { content: string }) {
 }
 
 function safeJson(text: string): unknown {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
   try {
-    return JSON.parse(text);
+    return JSON.parse(trimmed);
   } catch {
-    return null;
+    // fall through to tolerant repair
   }
+  const repaired = repairJson(trimmed);
+  if (repaired) {
+    try {
+      return JSON.parse(repaired);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Best-effort repair of model-emitted JSON: strips trailing commas and closes
+ * brackets/braces left open by token-limit truncation, so a cut-off chart spec
+ * still renders the points that did arrive.
+ */
+function repairJson(text: string): string | null {
+  let out = '';
+  const stack: string[] = [];
+  let inString = false;
+  let escaped = false;
+
+  for (const ch of text) {
+    if (inString) {
+      out += ch;
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      out += ch;
+    } else if (ch === '{' || ch === '[') {
+      stack.push(ch);
+      out += ch;
+    } else if (ch === '}' || ch === ']') {
+      stack.pop();
+      out += ch;
+    } else {
+      out += ch;
+    }
+  }
+
+  if (inString) out += '"';
+
+  // A dangling `"key":` with no value, or a trailing comma, both break parsing.
+  out = out.replace(/:\s*$/, ': null');
+  out = out.replace(/,\s*$/, '');
+
+  while (stack.length > 0) {
+    const open = stack.pop();
+    out += open === '{' ? '}' : ']';
+  }
+
+  return out;
 }

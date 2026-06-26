@@ -209,6 +209,19 @@ function parseProfile(body: Record<string, unknown>): ProfileInput {
   const optionalStr = (v: unknown): string | undefined =>
     typeof v === 'string' && v.trim() !== '' ? v : undefined;
 
+  const parseWeights = (v: unknown): ProfileInput['scoringWeights'] => {
+    if (typeof v !== 'object' || v === null || Array.isArray(v)) return undefined;
+    const src = v as Record<string, unknown>;
+    const keys = ['amenity', 'commute', 'affordability', 'yield', 'infrastructure'] as const;
+    const out: Record<string, number> = {};
+    for (const key of keys) {
+      const raw = src[key];
+      const num = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN;
+      if (Number.isFinite(num) && num >= 0) out[key] = num;
+    }
+    return Object.keys(out).length > 0 ? out : undefined;
+  };
+
   return {
     investorType: p.investorType === 'institutional' ? 'institutional' : 'retail',
     budgetAed: optionalInt(p.budgetAed),
@@ -227,6 +240,7 @@ function parseProfile(body: Record<string, unknown>): ProfileInput {
     bathrooms: optionalInt(p.bathrooms),
     minSizeSqm: optionalInt(p.minSizeSqm),
     lifestylePriorities: strList(p.lifestylePriorities),
+    scoringWeights: parseWeights(p.scoringWeights),
   };
 }
 

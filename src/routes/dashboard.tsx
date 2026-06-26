@@ -173,6 +173,28 @@ type InvestorProfile = {
   bathrooms?: number;
   minSizeSqm?: number;
   lifestylePriorities?: string[];
+  scoringWeights?: ScoringWeights;
+};
+
+type ScoringWeights = {
+  amenity?: number;
+  commute?: number;
+  affordability?: number;
+  yield?: number;
+  infrastructure?: number;
+};
+
+const DEFAULT_RETAIL_WEIGHTS: Required<Pick<ScoringWeights, 'amenity' | 'commute' | 'affordability'>> = {
+  amenity: 0.4,
+  commute: 0.35,
+  affordability: 0.25,
+};
+const DEFAULT_INSTITUTIONAL_WEIGHTS: Required<
+  Pick<ScoringWeights, 'amenity' | 'yield' | 'infrastructure'>
+> = {
+  amenity: 0.25,
+  yield: 0.45,
+  infrastructure: 0.3,
 };
 
 type Recommendation = {

@@ -131,16 +131,18 @@ Answer questions by calling the provided tools over real Abu Dhabi datasets — 
 Call as many tools as needed, then give a crisp, decision-ready answer in markdown.
 
 VISUALIZE DATA: Whenever your answer compares numbers across districts, sectors, time, or categories,
-embed ONE OR MORE charts using a fenced code block tagged \`chart\` containing a single JSON object.
-Build the chart ONLY from real values returned by the tools — never invent data points.
+embed ONE OR MORE charts using a fenced code block tagged \`chart\`. Build charts ONLY from real
+values returned by the tools — never invent data points.
 
-The chart JSON schema is:
-{
-  "type": "bar" | "hbar" | "line" | "area" | "pie" | "donut",
-  "title": "Short chart title",
-  "unit": "AED" | "%" | "/sqm" | "" (optional formatting hint),
-  "data": [ { "label": "Saadiyat Island", "value": 12450 }, ... ]
-}
+STRICT CHART RULES (follow exactly, or the chart will not render):
+- Open the block with exactly three backticks followed by the word chart on its own line.
+- The block body MUST be ONE valid JSON object on a SINGLE line (no comments, no trailing commas).
+- Do NOT pretty-print or wrap the JSON across multiple lines.
+- Close the block with three backticks on their own line, BEFORE any prose or the Sources line.
+- Keep "data" to at most 8 points so the JSON is never truncated.
+
+The chart JSON schema (single line) is:
+{"type":"bar"|"hbar"|"line"|"area"|"pie"|"donut","title":"Short title","unit":"AED"|"%"|"/sqm"|"","data":[{"label":"Saadiyat Island","value":12450}]}
 
 Guidance on chart type:
 - "bar": compare a metric across a handful (<=8) of categories/districts.
@@ -152,11 +154,12 @@ Place each chart right after the sentence that introduces it. Keep prose tight a
 Always cite the dataset source(s) you used at the end under a "Sources:" line.
 Format numbers as AED where relevant. Be concise and actionable.
 
-Example:
+Example (note the single-line JSON):
 Capital is most concentrated in residential mandates.
 \`\`\`chart
 {"type":"donut","title":"Investor mandates by sector","data":[{"label":"Residential","value":14},{"label":"Commercial","value":7}]}
 \`\`\`
+
 Sources: sample_investors.csv`;
 
 export type CopilotResponse = {

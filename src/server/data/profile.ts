@@ -13,6 +13,16 @@ function parseList(value: string | null): string[] | undefined {
   }
 }
 
+function parseWeights(value: string | null): ProfileInput['scoringWeights'] {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function getProfile(userId: string): Promise<StoredProfile | null> {
   const row = await getDb().investorProfile.findUnique({ where: { userId } });
   if (!row) return null;
@@ -34,6 +44,7 @@ export async function getProfile(userId: string): Promise<StoredProfile | null> 
     bathrooms: row.bathrooms ?? undefined,
     minSizeSqm: row.minSizeSqm ?? undefined,
     lifestylePriorities: parseList(row.lifestylePriorities),
+    scoringWeights: parseWeights(row.scoringWeights),
   };
 }
 
@@ -58,6 +69,10 @@ export async function upsertProfile(userId: string, input: ProfileInput): Promis
     lifestylePriorities: input.lifestylePriorities
       ? JSON.stringify(input.lifestylePriorities)
       : null,
+    scoringWeights:
+      input.scoringWeights && Object.keys(input.scoringWeights).length > 0
+        ? JSON.stringify(input.scoringWeights)
+        : null,
   };
 
   await getDb().investorProfile.upsert({
