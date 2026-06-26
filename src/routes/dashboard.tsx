@@ -2064,6 +2064,174 @@ function BestMatchPage({ facets }: { facets: Facets | null }) {
   );
 }
 
+const MARKET_DOT: Record<NewsItem['market'], string> = {
+  Dubai: 'bg-amber-500',
+  'Abu Dhabi': 'bg-sky-500',
+  UAE: 'bg-primary',
+};
+
+const SENTIMENT_BADGE: Record<NewsItem['sentiment'], 'success' | 'secondary' | 'destructive'> = {
+  positive: 'success',
+  neutral: 'secondary',
+  negative: 'destructive',
+};
+
+const PRIORITY_BADGE: Record<PortfolioAction['priority'], 'destructive' | 'warning' | 'secondary'> = {
+  high: 'destructive',
+  medium: 'warning',
+  low: 'secondary',
+};
+
+function MarketBriefing() {
+  const [news, setNews] = useState<MarketNews | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async (refresh = false) => {
+    if (refresh) setRefreshing(true);
+    else setLoading(true);
+    try {
+      const res = await fetch(`/api/intel/news${refresh ? '?refresh=1' : ''}`);
+      const data = (await res.json()) as MarketNews;
+      setNews(data);
+    } catch {
+      setNews(null);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const isEmpty = !loading && (!news || (news.news.length === 0 && news.actions.length === 0));
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <div className="flex items-center gap-2">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary/12 text-primary">
+              <Newspaper className="size-4.5" />
+            </span>
+            <div>
+              <CardTitle className="text-base">Today&rsquo;s market news</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Abu Dhabi &amp; Dubai{' '}
+                {news?.grounded
+                  ? '· live Google Search via Gemini'
+                  : news?.model
+                    ? '· generated with Gemini'
+                    : ''}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => load(true)}
+            disabled={loading || refreshing}
+            aria-label="Refresh news"
+          >
+            <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {loading && (
+            <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+              <Sparkles className="size-4 animate-pulse text-primary" />
+              Fetching the latest Abu Dhabi &amp; Dubai market news…
+            </div>
+          )}
+
+          {isEmpty && (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No news available right now. Set <code>GEMINI_API_KEY</code> and try Refresh.
+            </p>
+          )}
+
+          {!loading &&
+            news?.news.map((item, i) => (
+              <div
+                key={`${item.title}-${i}`}
+                className="rounded-lg border border-border bg-muted/30 p-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className={cn('size-2 shrink-0 rounded-full', MARKET_DOT[item.market])} />
+                    <span className="text-xs font-semibold text-muted-foreground">{item.market}</span>
+                    {item.category && (
+                      <Badge variant="outline" className="text-[0.6rem]">
+                        {titleCase(item.category)}
+                      </Badge>
+                    )}
+                  </div>
+                  <Badge variant={SENTIMENT_BADGE[item.sentiment]} className="shrink-0 capitalize">
+                    {item.sentiment}
+                  </Badge>
+                </div>
+                <p className="mt-1.5 text-sm font-semibold text-foreground">{item.title}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.summary}</p>
+                {item.source && (
+                  <p className="mt-1.5 text-[0.65rem] tracking-wide text-muted-foreground/80 uppercase">
+                    {item.source}
+                  </p>
+                )}
+              </div>
+            ))}
+        </CardContent>
+      </Card>
+
+      <Card className="h-fit">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary/12 text-primary">
+              <TrendingDown className="size-4.5" />
+            </span>
+            <div>
+              <CardTitle className="text-base">Recommended portfolio actions</CardTitle>
+              <p className="text-xs text-muted-foreground">Tailored to the news above</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2.5">
+          {loading && <p className="py-6 text-center text-sm text-muted-foreground">Analyzing…</p>}
+
+          {!loading && news && news.actions.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No actions suggested today.
+            </p>
+          )}
+
+          {!loading &&
+            news?.actions.map((action, i) => (
+              <div
+                key={`${action.title}-${i}`}
+                className="rounded-lg border border-border bg-muted/30 p-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-foreground">{action.title}</p>
+                  <Badge variant={PRIORITY_BADGE[action.priority]} className="shrink-0 capitalize">
+                    {action.priority}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{action.detail}</p>
+                {action.market && (
+                  <p className="mt-1.5 text-[0.65rem] tracking-wide text-muted-foreground/80 uppercase">
+                    {action.market}
+                  </p>
+                )}
+              </div>
+            ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function OverviewPage({
   data,
   onNavigate,
@@ -2121,6 +2289,8 @@ function OverviewPage({
           </Card>
         ))}
       </section>
+
+      <MarketBriefing />
 
       <Card className="bg-primary/[0.04]">
         <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
