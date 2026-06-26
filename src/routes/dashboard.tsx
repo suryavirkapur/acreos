@@ -4,20 +4,24 @@ import {
   Bell,
   Building2,
   FileText,
+  History,
   LayoutDashboard,
   LogOut,
   MapPin,
+  Plus,
   Search,
   Send,
   Settings,
   SlidersHorizontal,
   Sparkles,
+  Trash2,
   TrendingUp,
   Users,
   Wallet,
   X,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -189,15 +193,66 @@ const SUGGESTED = [
   'Where is investor capital concentrated by sector?',
 ];
 
+type ConversationMeta = { id: string; title: string; updatedAt: string };
+
 function Copilot() {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [history, setHistory] = useState<ConversationMeta[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [turns, loading]);
+
+  const refreshHistory = useCallback(async () => {
+    try {
+      const res = await fetch('/api/intel/conversations');
+      const data = await res.json();
+      setHistory(data.conversations ?? []);
+    } catch {
+      setHistory([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshHistory();
+  }, [refreshHistory]);
+
+  function newChat() {
+    setTurns([]);
+    setConversationId(null);
+    setShowHistory(false);
+  }
+
+  async function loadConversation(id: string) {
+    setShowHistory(false);
+    try {
+      const res = await fetch(`/api/intel/conversations/${id}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setConversationId(data.id);
+      setTurns(
+        (data.messages ?? []).map((m: { role: string; content: string; sources?: ChatTurn['sources'] }) => ({
+          role: m.role === 'user' ? 'user' : 'assistant',
+          text: m.content,
+          sources: m.sources,
+        })),
+      );
+    } catch {
+      // ignore
+    }
+  }
+
+  async function removeConversation(id: string, e: ReactMouseEvent) {
+    e.stopPropagation();
+    await fetch(`/api/intel/conversations/${id}`, { method: 'DELETE' }).catch(() => {});
+    if (id === conversationId) newChat();
+    refreshHistory();
+  }
 
   async function ask(question: string) {
     if (!question.trim() || loading) return;
@@ -208,13 +263,15 @@ function Copilot() {
       const res = await fetch('/api/intel/copilot', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, conversationId }),
       });
       const data = await res.json();
+      if (data.conversationId) setConversationId(data.conversationId);
       setTurns((t) => [
         ...t,
         { role: 'assistant', text: data.reply ?? data.error ?? 'No answer.', sources: data.toolsUsed },
       ]);
+      refreshHistory();
     } catch {
       setTurns((t) => [...t, { role: 'assistant', text: 'Request failed. Is the server running?' }]);
     } finally {
@@ -236,8 +293,61 @@ function Copilot() {
             </p>
           </div>
         </div>
-        <Badge variant="success">Gemini · tool-calling</Badge>
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowHistory((v) => !v)}
+            aria-label="Chat history"
+          >
+            <History className="size-4" />
+            <span className="hidden sm:inline">History</span>
+            {history.length > 0 && <Badge variant="secondary">{history.length}</Badge>}
+          </Button>
+          <Button variant="outline" size="sm" onClick={newChat} aria-label="New chat">
+            <Plus className="size-4" />
+            <span className="hidden sm:inline">New</span>
+          </Button>
+        </div>
       </CardHeader>
+
+      {showHistory && (
+        <div className="max-h-64 overflow-y-auto border-b border-border bg-muted/30">
+          {history.length === 0 && (
+            <p className="px-4 py-6 text-center text-sm text-muted-foreground">No saved chats yet.</p>
+          )}
+          {history.map((conv) => (
+            <div
+              key={conv.id}
+              className={cn(
+                'group flex items-center justify-between gap-2 border-b border-border/60 transition-colors last:border-0 hover:bg-muted',
+                conv.id === conversationId && 'bg-primary/8',
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => loadConversation(conv.id)}
+                className="min-w-0 flex-1 py-2.5 pl-4 text-left"
+              >
+                <span className="block truncate text-sm font-medium text-foreground">
+                  {conv.title}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {new Date(conv.updatedAt).toLocaleString()}
+                </span>
+              </button>
+              <button
+                type="button"
+                aria-label="Delete chat"
+                onClick={(e) => removeConversation(conv.id, e)}
+                className="mr-2 shrink-0 rounded p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <CardContent ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto py-4">
         {turns.length === 0 && (

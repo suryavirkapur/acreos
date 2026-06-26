@@ -1,7 +1,15 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { Scalar } from '@scalar/hono-api-reference';
 
+import type { Context } from 'hono';
+
 import { getAuth } from '@/server/auth';
+import {
+  deleteConversation,
+  getConversation,
+  listConversations,
+  saveTurn,
+} from '@/server/data/chats';
 import { runCopilot } from '@/server/data/copilot';
 import { matchInvestorToParcels } from '@/server/data/matching';
 import { generateDealMemo } from '@/server/data/memo';
@@ -117,12 +125,62 @@ app.post('/intel/deal-memo', async (c) => {
   return c.json(result);
 });
 
+async function getUserId(c: Context): Promise<string | null> {
+  try {
+    const session = await getAuth().api.getSession({ headers: c.req.raw.headers });
+    return session?.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 app.post('/intel/copilot', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const question = typeof body.question === 'string' ? body.question.trim() : '';
   if (!question) return c.json({ error: 'question is required' }, 400);
+
   const result = await runCopilot(question);
-  return c.json(result);
+
+  const userId = await getUserId(c);
+  let conversationId: string | undefined =
+    typeof body.conversationId === 'string' ? body.conversationId : undefined;
+
+  if (userId) {
+    try {
+      conversationId = await saveTurn({
+        userId,
+        conversationId,
+        question,
+        reply: result.reply,
+        sources: result.toolsUsed,
+      });
+    } catch (error) {
+      console.error('failed to save chat turn', error);
+    }
+  }
+
+  return c.json({ ...result, conversationId });
+});
+
+app.get('/intel/conversations', async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ conversations: [] });
+  return c.json({ conversations: await listConversations(userId) });
+});
+
+app.get('/intel/conversations/:id', async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: 'unauthorized' }, 401);
+  const convo = await getConversation(userId, c.req.param('id'));
+  if (!convo) return c.json({ error: 'not found' }, 404);
+  return c.json(convo);
+});
+
+app.delete('/intel/conversations/:id', async (c) => {
+  const userId = await getUserId(c);
+  if (!userId) return c.json({ error: 'unauthorized' }, 401);
+  await deleteConversation(userId, c.req.param('id'));
+  return c.json({ ok: true });
 });
 
 app.doc('/openapi', {
