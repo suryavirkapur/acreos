@@ -2,13 +2,16 @@ import { Link, createFileRoute } from '@tanstack/react-router';
 import {
   ArrowRight,
   Building2,
+  ChevronDown,
   FileSearch,
   Gavel,
   KeyRound,
   LineChart,
   Radar,
   Sparkles,
+  Waves,
 } from 'lucide-react';
+import { useState } from 'react';
 
 export const Route = createFileRoute('/')({
   ssr: true,
@@ -62,6 +65,37 @@ const MOCK_DEALS = [
   { name: 'Camden Mews Portfolio', loc: 'London, UK', stage: 'Diligence', value: '$42.0M' },
   { name: 'Harbor Point Logistics', loc: 'Rotterdam, NL', stage: 'Negotiation', value: '$118.5M' },
   { name: 'Sunbelt BTR Cluster', loc: 'Austin, TX', stage: 'Sourcing', value: '$73.2M' },
+];
+
+const FAQS = [
+  {
+    q: 'How much does it cost to get started?',
+    a: 'AcreOS is usage-based — you only pay for the agent work that moves your deals forward. There are no per-seat fees, so your whole team can collaborate, and pricing scales with the size of your portfolio.',
+  },
+  {
+    q: 'How fast can agents start sourcing deals?',
+    a: 'Most teams are live within a day. Connect your mandate, brokers, and data sources, and agents begin scanning portals, broker threads, and off-market channels immediately.',
+  },
+  {
+    q: 'Which asset classes does AcreOS cover?',
+    a: 'Residential, BTR, multifamily, logistics, retail, and mixed-use. Agents adapt their underwriting models and comps to whatever asset class your mandate targets.',
+  },
+  {
+    q: 'Can I keep my existing brokers and partners?',
+    a: 'Yes. AcreOS works alongside your existing relationships. Agents triage broker emails, portals, and WhatsApp threads, then loop in the right people exactly when a decision is needed.',
+  },
+  {
+    q: 'How is AcreOS different from a traditional CRM?',
+    a: 'A CRM stores data and waits. AcreOS is a runtime — agents actively re-run diligence as prices move, comps shift, and rates change, pushing every deal forward end to end.',
+  },
+  {
+    q: 'Do I really need this before I have a portfolio?',
+    a: 'Even a single deal benefits from always-on sourcing and live underwriting. Agents help you find, evaluate, and execute your first acquisition with institutional-grade rigor.',
+  },
+  {
+    q: 'What happens when an agent needs sign-off?',
+    a: 'Agents drive the work but never act blindly. When a decision needs your judgment — a price, an LOI, a financing term — they surface a clear, reviewable interface and pause for approval.',
+  },
 ];
 
 function ProductPreview() {
@@ -128,6 +162,63 @@ function Divider() {
       <span className="size-1 rounded-full bg-current" />
       <span className="size-1 rounded-full bg-current" />
     </div>
+  );
+}
+
+function Faq() {
+  const [open, setOpen] = useState<number | null>(0);
+
+  return (
+    <section id="faq" className="page-wrap px-4 py-20">
+      <div className="mx-auto max-w-2xl text-center">
+        <p className="island-kicker mb-3">FAQ</p>
+        <h2 className="font-serif text-4xl font-semibold tracking-tight text-(--ink) sm:text-5xl">
+          Questions, answered
+        </h2>
+        <p className="mt-4 text-lg text-(--ink-soft)">
+          Everything you need to know about putting agents to work on your deals.
+        </p>
+      </div>
+
+      <div className="island-shell mx-auto mt-12 max-w-3xl overflow-hidden">
+        {FAQS.map((item, index) => {
+          const isOpen = open === index;
+          return (
+            <div key={item.q} className={index > 0 ? 'border-t border-(--line)' : undefined}>
+              <button
+                type="button"
+                aria-expanded={isOpen}
+                onClick={() => setOpen(isOpen ? null : index)}
+                className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-(--paper-soft)/50"
+              >
+                <span className="text-base font-bold text-(--ink)">{item.q}</span>
+                <ChevronDown
+                  className={`size-5 shrink-0 text-(--ink-faint) transition-transform duration-200 ${
+                    isOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+              <div
+                className={`grid transition-all duration-300 ease-out ${
+                  isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                }`}
+              >
+                <div className="overflow-hidden">
+                  <p className="px-6 pb-5 text-sm/7 text-(--ink-soft)">{item.a}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="mt-6 text-center text-sm text-(--ink-soft)">
+        Can&rsquo;t find an answer to your question?{' '}
+        <Link to="/login" className="link-brand">
+          Get in touch
+        </Link>
+      </p>
+    </section>
   );
 }
 
@@ -332,21 +423,43 @@ function App() {
         </article>
       </section>
 
-      {/* final cta */}
+      {/* faq */}
+      <Faq />
+
+      {/* beachy final cta */}
       <section className="page-wrap px-4 pb-24">
-        <div className="surface-dark dot-grid relative overflow-hidden rounded-3xl px-8 py-16 text-center">
-          <div className="relative mx-auto max-w-xl">
-            <h2 className="font-serif text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-              Put your portfolio on AcreOS
+        <div className="surface-beach relative overflow-hidden rounded-3xl px-8 py-20 text-center">
+          <span className="beach-sun" aria-hidden="true" />
+          <span className="beach-wave" aria-hidden="true" />
+
+          <div className="relative mx-auto max-w-2xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+              <Waves className="size-3.5" />
+              Coastal &amp; resort portfolios
+            </span>
+
+            <h2 className="mt-6 font-serif text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+              Find your next property by the water
             </h2>
-            <p className="mt-3 text-white/70">
-              Sign in with your email — no passwords. See how agents handle your next deal.
+            <p className="mx-auto mt-4 max-w-xl text-lg text-white/85">
+              From beachfront rentals to harbor-side developments, let agents source, underwrite, and
+              close coastal deals while you enjoy the view.
             </p>
-            <div className="mt-7 flex justify-center">
-              <Link to="/login" className="btn-brand text-base">
+
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-base font-bold text-(--brand-deep) shadow-lg transition hover:-translate-y-0.5 hover:bg-white/90"
+              >
                 Get started
                 <ArrowRight className="size-4" />
               </Link>
+              <a
+                href="#how-it-works"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/10 px-6 py-3.5 text-base font-bold text-white backdrop-blur-sm transition hover:bg-white/20"
+              >
+                See how it works
+              </a>
             </div>
           </div>
         </div>

@@ -393,6 +393,47 @@ a {
   backdrop-filter: blur(6px);
 }
 
+/* beachy blue cta */
+.surface-beach {
+  position: relative;
+  isolation: isolate;
+  color: #fff;
+  background:
+    radial-gradient(900px 420px at 50% -20%, rgba(255, 255, 255, 0.35), transparent 60%),
+    linear-gradient(180deg, #38bdf8 0%, #0ea5e9 38%, #2563eb 72%, #1d39c4 100%);
+  box-shadow: 0 30px 70px rgba(14, 165, 233, 0.35);
+}
+
+/* soft sun glow, top-right */
+.beach-sun {
+  position: absolute;
+  top: -3rem;
+  right: 8%;
+  z-index: -1;
+  width: 14rem;
+  height: 14rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 247, 214, 0.9) 0%, rgba(255, 224, 130, 0.35) 45%, transparent 70%);
+  filter: blur(2px);
+}
+
+/* sandy wave band along the bottom */
+.beach-wave {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: -1;
+  height: 5.5rem;
+  background:
+    radial-gradient(40px 18px at 50% 0, rgba(255, 255, 255, 0.18) 60%, transparent 62%) repeat-x,
+    linear-gradient(180deg, transparent 0%, rgba(250, 240, 214, 0.18) 55%, rgba(250, 240, 214, 0.32) 100%);
+  background-size:
+    80px 100%,
+    100% 100%;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 60%);
+  mask-image: linear-gradient(180deg, transparent 0%, black 60%);
+}
+
 /* product preview mock */
 .mock-shell {
   border: 1px solid var(--line-strong);
