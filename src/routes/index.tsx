@@ -98,6 +98,51 @@ const MOCK_DEALS = [
   },
 ];
 
+const MANIFESTO: {
+  kicker: string;
+  title: string;
+  body: string;
+  chips?: string[];
+  image: string;
+  imageAlt: string;
+  badge: string;
+}[] = [
+  {
+    kicker: 'The platform',
+    title: 'Agents are the primary users',
+    body: 'They are aware of everything happening across the investment workflow — and they coordinate with each other, generate interfaces for you, and take action across the full lifecycle of a deal.',
+    chips: [
+      'Listings',
+      'Broker threads',
+      'Legal docs',
+      'Valuation models',
+      'Mortgage terms',
+      'Rental comps',
+      'Market data',
+      'Portfolio performance',
+    ],
+    image: '/corgi-hero.png',
+    imageAlt: 'AcreOS agent mascot working the phones on a live deal',
+    badge: '5 agents active',
+  },
+  {
+    kicker: 'The runtime',
+    title: 'Agents drive work, not conversation',
+    body: 'A deal unfolds over weeks or months across dozens of decision points. Our runtime reacts as the world moves — a price changes, comps shift, a document arrives, rates move — picking work back up and looping you in exactly when needed.',
+    image: '/hand-halftone.png',
+    imageAlt: 'Halftone illustration of a hand, representing human judgment in the loop',
+    badge: 'Always on',
+  },
+  {
+    kicker: 'End to end',
+    title: 'We are the workflow, not SaaS bolted on',
+    body: 'Every deal reviewed, document analyzed, and outcome recorded deepens a base of institutional knowledge that compounds over time. As models improve, the platform gets sharper — and you make better decisions.',
+    image: '/clouds-bg.png',
+    imageAlt: 'Soft clouds over open sky, evoking compounding scale',
+    badge: 'Compounding',
+  },
+];
+
 const FAQS = [
   {
     q: 'How much does it cost to get started?',
@@ -188,12 +233,45 @@ function ProductPreview() {
   );
 }
 
-function Divider() {
+function StoryRow({
+  kicker,
+  title,
+  body,
+  chips,
+  image,
+  imageAlt,
+  badge,
+  flip,
+}: (typeof MANIFESTO)[number] & { flip: boolean }) {
   return (
-    <div className="my-12 flex justify-center gap-3 text-(--ink-faint)" aria-hidden="true">
-      <span className="size-1 rounded-full bg-current" />
-      <span className="size-1 rounded-full bg-current" />
-      <span className="size-1 rounded-full bg-current" />
+    <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+      <div className={`story-visual ${flip ? 'lg:order-2' : ''}`}>
+        <img src={image} alt={imageAlt} loading="lazy" />
+        <span className="story-badge">
+          <Sparkles className="size-3.5" />
+          {badge}
+        </span>
+      </div>
+
+      <div className={flip ? 'lg:order-1' : ''}>
+        <p className="island-kicker mb-3">{kicker}</p>
+        <h3 className="font-serif text-3xl font-semibold tracking-tight text-(--ink) sm:text-4xl">
+          {title}
+        </h3>
+        <p className="mt-4 text-lg/8 text-(--ink-soft)">{body}</p>
+        {chips && (
+          <ul className="mt-6 flex flex-wrap gap-2">
+            {chips.map((chip) => (
+              <li
+                key={chip}
+                className="rounded-full bg-(--paper-soft) px-3 py-1 text-sm font-semibold text-(--ink-soft)"
+              >
+                {chip}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
@@ -406,82 +484,24 @@ function App() {
         </div>
       </section>
 
-      {/* manifesto */}
+      {/* manifesto — visual story rows */}
       <section id="manifesto" className="page-wrap px-4 py-24">
-        <article className="mx-auto max-w-2xl">
-          <p className="island-kicker mb-4">Our mission</p>
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="island-kicker mb-3">Our mission</p>
           <h2 className="font-serif text-4xl leading-tight font-semibold text-(--ink) sm:text-5xl">
             We&rsquo;re rebuilding property investment with AI
           </h2>
-          <p className="mt-6 text-lg text-(--ink-soft)">
-            Our mission is to make property investing dramatically better.
+          <p className="mt-4 text-lg text-(--ink-soft)">
+            Real estate is one of the world&rsquo;s largest asset classes — yet sourced across
+            brokers, portals, PDFs, and half-broken CRMs. We&rsquo;re making it dramatically better.
           </p>
-          <p className="mt-5 text-lg/8 text-(--ink-soft)">
-            Real estate is one of the world&rsquo;s largest asset classes, but the infrastructure
-            behind it is fragmented, slow, and manual. Deals are sourced across brokers, portals,
-            WhatsApp groups, PDFs, emails, calls, spreadsheets, and half-broken CRMs.
-          </p>
-          <p className="mt-5 text-lg/8 text-(--ink-soft)">
-            We&rsquo;re building{' '}
-            <strong className="font-semibold text-(--brand-deep)">AcreOS</strong>: an AI-native
-            property investment platform where agents carry the operational weight of sourcing,
-            diligence, execution, and portfolio management, so investors can focus on judgment,
-            relationships, and capital allocation.
-          </p>
+        </div>
 
-          <Divider />
-
-          <h3 className="font-serif text-2xl font-semibold text-(--ink) sm:text-3xl">
-            Agents are the primary users of our platform.
-          </h3>
-          <p className="mt-5 text-lg/8 text-(--ink-soft)">
-            They are aware of everything happening across the investment workflow: listings, broker
-            conversations, legal documents, valuation models, mortgage terms, rental comps, market
-            data, news, tenant activity, maintenance updates, and portfolio performance.
-          </p>
-          <p className="mt-5 text-lg/8 text-(--ink-soft)">
-            They coordinate with other agents, generate dynamic interfaces for investors, and take
-            action across the full lifecycle of a property investment.
-          </p>
-
-          <Divider />
-
-          <h3 className="font-serif text-2xl font-semibold text-(--ink) sm:text-3xl">
-            Agents drive work, not conversation.
-          </h3>
-          <p className="mt-5 text-lg/8 text-(--ink-soft)">
-            Property investment does not happen in a single chat. A deal can unfold over weeks or
-            months, across dozens of decision points: sourcing, underwriting, site visits,
-            negotiation, financing, legal review, closing, leasing, management, and eventual exit.
-          </p>
-          <p className="mt-5 text-lg/8 text-(--ink-soft)">
-            Our agent runtime is built for that reality.
-          </p>
-          <p className="mt-5 text-lg/8 text-(--ink-soft)">
-            Agents react as the world moves: a broker sends a new deal, a price changes, rental
-            comps shift, a document arrives, a tenant issue opens, interest rates move, or a better
-            opportunity appears. They pick work back up, push it forward, and bring in people
-            exactly when needed.
-          </p>
-
-          <Divider />
-
-          <h3 className="font-serif text-2xl font-semibold text-(--ink) sm:text-3xl">
-            We&rsquo;re not SaaS that plugs into someone else&rsquo;s property workflow.
-          </h3>
-          <p className="mt-5 text-lg/8 text-(--ink-soft)">We are the workflow, end to end.</p>
-          <p className="mt-5 text-lg/8 text-(--ink-soft)">
-            Every deal reviewed, every document analyzed, every negotiation tracked, every asset
-            managed, and every outcome recorded deepens a base of institutional knowledge that
-            compounds over time.
-          </p>
-          <p className="mt-5 text-lg/8 font-medium text-(--ink)">
-            As models improve, the platform gets sharper.
-          </p>
-          <p className="mt-2 text-lg/8 font-medium text-(--ink)">
-            As the platform gets sharper, investors make better decisions.
-          </p>
-        </article>
+        <div className="mt-16 space-y-20 lg:mt-20 lg:space-y-28">
+          {MANIFESTO.map((row, index) => (
+            <StoryRow key={row.title} {...row} flip={index % 2 === 1} />
+          ))}
+        </div>
       </section>
 
       {/* faq */}
