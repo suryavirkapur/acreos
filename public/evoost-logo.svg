@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="eVoost AI">
+  <rect x="1.5" y="1.5" width="21" height="21" rx="6" fill="#17120e"/>
+  <path d="M7 13.5 12 8.5l5 5" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M7 17.5 12 12.5l5 5" stroke="#ffffff" stroke-opacity="0.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

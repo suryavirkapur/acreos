@@ -22,22 +22,9 @@ export const Route = createFileRoute('/')({
   component: App,
 });
 
-function CursorLogo({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
-      {/* top face */}
-      <path d="M12 1 21.5 6.5 12 12 2.5 6.5 12 1Z" fillOpacity="0.95" />
-      {/* right face */}
-      <path d="M21.5 6.5 21.5 17.5 12 23 12 12 21.5 6.5Z" fillOpacity="0.6" />
-      {/* left face */}
-      <path d="M2.5 6.5 12 12 12 23 2.5 17.5 2.5 6.5Z" fillOpacity="0.8" />
-    </svg>
-  );
-}
-
-const INVESTORS: { name: string; logo: 'evoss' | 'cursor' }[] = [
-  { name: 'eVoost AI', logo: 'evoss' },
-  { name: 'Cursor', logo: 'cursor' },
+const INVESTORS: { name: string; logo: string; wordmark?: boolean }[] = [
+  { name: 'eVoost AI', logo: '/evoost-logo.svg' },
+  { name: 'Cursor', logo: '/Cursor_logo.svg.png', wordmark: true },
 ];
 
 const FLOW = [
@@ -724,26 +711,26 @@ function App() {
                 Backed by the best
               </p>
               <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
-                {INVESTORS.map((investor) => (
-                  <span
-                    key={investor.name}
-                    className="inline-flex items-center gap-2 text-(--ink-soft) transition-colors hover:text-(--ink)"
-                  >
-                    {investor.logo === 'cursor' ? (
-                      <CursorLogo className="size-5 sm:size-6" />
-                    ) : (
-                      <img
-                        src="/evoss-logo.svg"
-                        alt=""
-                        aria-hidden="true"
-                        className="size-5 sm:size-6"
-                      />
-                    )}
-                    <span className="font-serif text-base font-medium tracking-tight sm:text-lg">
-                      {investor.name}
+                {INVESTORS.map((investor) =>
+                  investor.wordmark ? (
+                    <img
+                      key={investor.name}
+                      src={investor.logo}
+                      alt={investor.name}
+                      className="h-5 w-auto opacity-85 transition-opacity hover:opacity-100 sm:h-6"
+                    />
+                  ) : (
+                    <span
+                      key={investor.name}
+                      className="inline-flex items-center gap-2 text-(--ink-soft) transition-colors hover:text-(--ink)"
+                    >
+                      <img src={investor.logo} alt="" aria-hidden="true" className="size-5 sm:size-6" />
+                      <span className="font-serif text-base font-medium tracking-tight sm:text-lg">
+                        {investor.name}
+                      </span>
                     </span>
-                  </span>
-                ))}
+                  ),
+                )}
               </div>
             </div>
           </div>

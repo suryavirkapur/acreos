@@ -9,7 +9,7 @@
   },
   "rewrites": [
     {
-      "source": "/((?!assets/|static/|favicon.ico|favicon.svg|robots.txt|manifest.json|logo192.png|logo512.png|clouds-bg.png|corgi-hero.png|agent-mascot.png|hand-halftone.png|saadiyat-beachfront.webp).*)",
+      "source": "/((?!assets/|static/|favicon.ico|favicon.svg|robots.txt|manifest.json|logo192.png|logo512.png|clouds-bg.png|corgi-hero.png|agent-mascot.png|hand-halftone.png|evoost-logo.svg|Cursor_logo.svg.png|saadiyat-beachfront.webp).*)",
       "destination": "/api"
     }
   ]

@@ -547,10 +547,7 @@ body::after {
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 1.5rem;
-  background:
-    radial-gradient(110% 90% at 100% 0%, rgba(255, 255, 255, 0.7), transparent 60%),
-    radial-gradient(90% 80% at 0% 100%, rgba(43, 80, 240, 0.14), transparent 62%),
-    linear-gradient(180deg, #eaf0ff 0%, #c3d3ff 100%);
+  background: linear-gradient(180deg, #ffffff 0%, var(--paper-soft) 100%);
 }
 
 .showcase-ui {
@@ -576,7 +573,7 @@ body::after {
   max-width: 42%;
   user-select: none;
   pointer-events: none;
-  filter: drop-shadow(0 14px 24px rgba(29, 57, 196, 0.22));
+  filter: drop-shadow(0 10px 20px rgba(23, 18, 14, 0.16));
 }
 
 .showcase-bubble {
