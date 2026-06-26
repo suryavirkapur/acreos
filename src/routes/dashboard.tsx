@@ -63,6 +63,7 @@ export const Route = createFileRoute('/dashboard')({
 
 const TABS = [
   'Overview',
+  'Portfolio',
   'Profile',
   'Best Match',
   'Assistant',
@@ -75,6 +76,7 @@ type Tab = (typeof TABS)[number];
 
 const NAV: { label: Tab; icon: typeof LayoutDashboard }[] = [
   { label: 'Overview', icon: LayoutDashboard },
+  { label: 'Portfolio', icon: Briefcase },
   { label: 'Profile', icon: UserCircle },
   { label: 'Best Match', icon: MapPin },
   { label: 'Assistant', icon: Dog },
@@ -86,6 +88,7 @@ const NAV: { label: Tab; icon: typeof LayoutDashboard }[] = [
 
 const TAB_SUBTITLE: Record<Tab, string> = {
   Overview: 'Grounded in Abu Dhabi parcels, transactions, investors & communities',
+  Portfolio: 'Portfolio health, exposure, watchlist repricing, and action priorities',
   Profile: 'Tell us how you invest — we tailor everything to it',
   'Best Match': 'Find properties that exactly match your preferences',
   Assistant: 'Ask cross-dataset questions, get cited answers',
@@ -2713,6 +2716,156 @@ function OverviewPage({
   );
 }
 
+function PortfolioPage({
+  data,
+  onNavigate,
+}: {
+  data: Summary | null;
+  onNavigate: (tab: Tab) => void;
+}) {
+  const summary = data?.summary;
+  const topPipeline = data?.topVacant.slice(0, 4) ?? [];
+  const topDrops = HOMEPAGE_PRICE_DROPS.slice(0, 5);
+  const maxMandates = Math.max(1, ...(data?.capitalSupply ?? []).map((row) => row.mandates));
+  const totalDropValue = topDrops.reduce((sum, listing) => sum + listing.largestTotalDrop, 0);
+  const avgTopDropPct =
+    topDrops.length > 0
+      ? topDrops.reduce((sum, listing) => sum + listing.largestTotalDropPercent, 0) / topDrops.length
+      : 0;
+
+  const metrics = [
+    {
+      label: 'Tracked land value',
+      value: summary ? aedShort(summary.totalVacantValueAed) : '—',
+      sub: summary ? `${summary.vacantParcels} vacant parcels` : 'Loading',
+      icon: Wallet,
+    },
+    {
+      label: 'Avg yield',
+      value: summary ? `${summary.avgGrossYieldPct}%` : '—',
+      sub: 'district baseline',
+      icon: TrendingUp,
+    },
+    {
+      label: 'Mandate depth',
+      value: summary ? String(summary.investorMandates) : '—',
+      sub: 'active investor profiles',
+      icon: Users,
+    },
+    {
+      label: 'Watchlist cuts',
+      value: aedShort(totalDropValue),
+      sub: `${avgTopDropPct.toFixed(1)}% avg top drop`,
+      icon: TrendingDown,
+    },
+  ];
+
+  return (
+    <>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => (
+          <Card key={metric.label}>
+            <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-semibold text-muted-foreground">
+                {metric.label}
+              </CardTitle>
+              <span className="flex size-9 items-center justify-center rounded-lg bg-primary/12 text-primary">
+                <metric.icon className="size-4.5" />
+              </span>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-extrabold tracking-tight text-foreground">
+                {metric.value}
+              </div>
+              <p className="mt-1 text-xs font-medium text-muted-foreground">{metric.sub}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="text-base">Portfolio pipeline</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Highest-potential land opportunities currently tracked
+              </p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => onNavigate('Opportunities')}>
+              View opportunities
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {topPipeline.map((parcel) => (
+              <div
+                key={parcel.parcel_id}
+                className="grid gap-3 rounded-lg border border-border bg-muted/30 p-3 sm:grid-cols-[1fr_auto]"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-foreground">{parcel.parcel_id}</span>
+                    <Badge variant="secondary">{parcel.district}</Badge>
+                    <Badge variant="outline">{titleCase(parcel.land_use)}</Badge>
+                  </div>
+                  <p className="mt-1 truncate text-sm text-muted-foreground">
+                    {titleCase(parcel.recommended_use)}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between gap-6 sm:justify-end">
+                  <div>
+                    <p className="text-[0.65rem] font-semibold tracking-wide text-muted-foreground uppercase">
+                      Value
+                    </p>
+                    <p className="font-extrabold text-foreground">
+                      {aedShort(parcel.estimated_value_aed)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[0.65rem] font-semibold tracking-wide text-muted-foreground uppercase">
+                      Score
+                    </p>
+                    <p className="font-extrabold text-primary">
+                      {parcel.development_potential_score}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!data && <p className="py-4 text-sm text-muted-foreground">Loading portfolio data…</p>}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Capital allocation</CardTitle>
+            <p className="text-sm text-muted-foreground">Mandate concentration by target sector</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(data?.capitalSupply ?? []).slice(0, 6).map((row) => (
+              <div key={row.sector} className="space-y-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold text-foreground">{titleCase(row.sector)}</span>
+                  <span className="text-muted-foreground">{row.mandates} mandates</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary"
+                    style={{ width: `${(row.mandates / maxMandates) * 100}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+            {!data && <p className="py-4 text-sm text-muted-foreground">Loading allocation…</p>}
+          </CardContent>
+        </Card>
+      </div>
+
+      <DashboardPriceDrops />
+    </>
+  );
+}
+
 function MarketTable({ data }: { data: Summary | null }) {
   return (
     <Card>
@@ -2886,14 +3039,14 @@ function Dashboard() {
           </span>
         </div>
 
-        <nav className="mt-8 flex flex-col gap-1">
+        <nav className="mt-8 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
           {NAV.map((item) => (
             <button
               key={item.label}
               type="button"
               onClick={() => setTab(item.label)}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors',
+                'flex shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors',
                 tab === item.label
                   ? 'bg-primary/12 text-primary'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -2907,7 +3060,7 @@ function Dashboard() {
 
         <button
           type="button"
-          className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="mt-4 flex shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <Settings className="size-4.5" />
           Settings
@@ -2916,20 +3069,42 @@ function Dashboard() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex items-center gap-4 border-b border-border bg-background/85 px-5 py-3.5 backdrop-blur-md sm:px-8">
-          <div>
+          <div className="min-w-0">
             <h1 className="text-lg font-bold tracking-tight text-foreground">
               {tab === 'Overview' ? 'UAE Investment Intelligence' : tab}
             </h1>
             <p className="hidden text-xs text-muted-foreground sm:block">{TAB_SUBTITLE[tab]}</p>
           </div>
 
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex shrink-0 items-center gap-3">
             <Button variant="outline" size="icon" className="rounded-full">
               <Bell className="size-4.5" />
             </Button>
             <UserMenu email={email} onSignOut={signOut} />
           </div>
         </header>
+
+        <nav
+          className="flex gap-1 overflow-x-auto border-b border-border px-5 py-2 lg:hidden"
+          aria-label="Dashboard sections"
+        >
+          {NAV.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => setTab(item.label)}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
+                tab === item.label
+                  ? 'bg-primary/12 text-primary'
+                  : 'bg-muted text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <item.icon className="size-3.5" />
+              {item.label}
+            </button>
+          ))}
+        </nav>
 
         {tab === 'Assistant' ? (
           <main className="flex min-h-0 flex-1 flex-col">
@@ -2938,6 +3113,8 @@ function Dashboard() {
         ) : (
           <main className="flex-1 space-y-6 px-5 py-6 sm:px-8">
             {tab === 'Overview' && <OverviewPage data={data} onNavigate={setTab} />}
+
+            {tab === 'Portfolio' && <PortfolioPage data={data} onNavigate={setTab} />}
 
             {tab === 'Profile' && <ProfilePage facets={facets} onNavigate={setTab} />}
 
