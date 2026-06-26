@@ -430,7 +430,7 @@ function ProductShowcase({
           </div>
           <span className="showcase-bubble">{bubble}</span>
           <img
-            src="/agent-mascot.png"
+            src="/corgi-hero.png"
             alt=""
             aria-hidden="true"
             className="showcase-mascot"
@@ -513,28 +513,28 @@ function Faq() {
 function App() {
   return (
     <main className="relative">
-      {/* hero - full-bleed Saadiyat Island beachfront */}
-      <section className="hero-full -mt-px flex min-h-160 items-center lg:min-h-195">
+      {/* hero - full-bleed clouds */}
+      <section className="hero-clouds -mt-px flex min-h-160 items-center lg:min-h-195">
         <img
-          src="/saadiyat-beachfront.webp"
-          alt="Cozy Saadiyat Island beach house at golden hour, with the Louvre Abu Dhabi, Sheikh Zayed Grand Mosque, and Etihad Towers along the skyline"
-          className="hero-full-img"
+          src="/clouds-bg.png"
+          alt="Soft blue sky with sunlit clouds"
+          className="hero-bg"
           fetchPriority="high"
         />
-        <div className="hero-full-scrim" />
+        <div className="hero-clouds-scrim" />
 
         <div className="page-wrap relative px-4 py-24 lg:py-32">
           <div className="rise-in max-w-2xl">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+            <span className="inline-flex items-center gap-2 rounded-full border border-(--line) bg-(--card)/80 px-3 py-1 text-xs font-semibold text-(--ink-soft) shadow-sm backdrop-blur-sm">
               <span className="size-1.5 rounded-full bg-(--brand)" />
               Announcing our $100M Series A raise
             </span>
 
-            <h1 className="display-title mt-6 text-5xl leading-[1.02] font-extrabold tracking-tight text-white sm:text-6xl xl:text-7xl">
-              Property investment, <span className="hero-accent-light">run by AI agents.</span>
+            <h1 className="display-title mt-6 text-5xl leading-[1.02] font-extrabold tracking-tight text-(--ink) sm:text-6xl xl:text-7xl">
+              Property investment, <span className="hero-accent">run by AI agents.</span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-lg text-white/85">
+            <p className="mt-6 max-w-xl text-lg text-(--ink-soft)">
               AcreOS is an AI-native platform where agents carry sourcing, diligence, execution, and
               portfolio management, so you focus on judgment, relationships, and capital allocation.
             </p>
@@ -546,21 +546,21 @@ function App() {
               </Link>
               <a
                 href="#how-it-works"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/10 px-6 py-3.5 text-base font-bold text-white backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/20"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-(--line-strong) bg-(--card) px-6 py-3.5 text-base font-bold text-(--ink) shadow-sm transition hover:-translate-y-0.5 hover:bg-(--paper-soft)"
               >
                 See how it works
               </a>
             </div>
 
             <div className="mt-12">
-              <p className="mb-4 text-xs font-semibold tracking-[0.16em] text-white/55 uppercase">
+              <p className="mb-4 text-xs font-semibold tracking-[0.16em] text-(--ink-faint) uppercase">
                 Backed by the best
               </p>
               <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
                 {INVESTORS.map((investor) => (
                   <span
                     key={investor.name}
-                    className="inline-flex items-center gap-2 text-white/85 transition-opacity hover:text-white"
+                    className="inline-flex items-center gap-2 text-(--ink-soft) transition-colors hover:text-(--ink)"
                   >
                     {investor.logo === 'cursor' ? (
                       <CursorLogo className="size-5 sm:size-6" />

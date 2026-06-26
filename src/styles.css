@@ -397,6 +397,20 @@ body::after {
   user-select: none;
 }
 
+/* lighten the left so dark hero copy stays legible over the clouds */
+.hero-clouds-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    90deg,
+    rgba(247, 244, 238, 0.88) 0%,
+    rgba(247, 244, 238, 0.55) 36%,
+    rgba(247, 244, 238, 0.15) 60%,
+    rgba(247, 244, 238, 0) 78%
+  );
+}
+
 /* soften clouds and fade into the page at the bottom */
 .hero-clouds::after {
   content: '';
