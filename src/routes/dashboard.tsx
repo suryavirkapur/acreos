@@ -76,14 +76,14 @@ type Tab = (typeof TABS)[number];
 
 const NAV_GROUPS: Array<{
   label: string;
-  items: { label: Tab; icon: typeof LayoutDashboard }[];
+  items: { label: Tab; icon: typeof LayoutDashboard; tag?: string }[];
 }> = [
   {
     label: 'Workspace',
     items: [
       { label: 'Overview', icon: LayoutDashboard },
       { label: 'Portfolio', icon: Briefcase },
-      { label: 'Assistant', icon: Dog },
+      { label: 'Assistant', icon: Dog, tag: 'TRYME' },
     ],
   },
   {
@@ -3292,6 +3292,7 @@ function Dashboard() {
                 >
                   <item.icon className="size-4.5" />
                   {item.label}
+                  {item.tag && <Badge variant="warning" className="ml-2 shrink-0">{item.tag}</Badge>}
                 </button>
               ))}
             </div>
@@ -3342,6 +3343,11 @@ function Dashboard() {
             >
               <item.icon className="size-3.5" />
               {item.label}
+              {item.tag && (
+                <Badge variant="warning" className="ml-2 shrink-0 text-[0.55rem]">
+                  {item.tag}
+                </Badge>
+              )}
             </button>
           ))}
         </nav>
