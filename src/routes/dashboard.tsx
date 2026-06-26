@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import {
+  ArrowRight,
   ArrowUpRight,
   Bell,
   Briefcase,
@@ -34,7 +35,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Chart } from '@/components/Chart';
 import { MarketDashboard } from '@/components/market/MarketDashboard';
+import { MarketMap } from '@/components/market/MarketMap';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/auth-client';
 import { Markdown } from '@/lib/markdown';
@@ -2628,6 +2631,21 @@ function DashboardPriceDrops() {
   );
 }
 
+function OverviewMomentumBar({ value, max }: { value: number; max: number }) {
+  const width = max > 0 ? (Math.abs(value) / max) * 100 : 0;
+  return (
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+      <div
+        className={cn(
+          'h-full rounded-full',
+          value >= 0 ? 'bg-emerald-500' : 'bg-destructive',
+        )}
+        style={{ width: `${Math.min(100, width)}%` }}
+      />
+    </div>
+  );
+}
+
 function OverviewPage({
   data,
   onNavigate,
@@ -2643,31 +2661,59 @@ function OverviewPage({
       value: s ? aedShort(s.totalVacantValueAed) : '—',
       sub: s ? `${s.vacantParcels} parcels` : '',
       icon: Wallet,
+      accent: 'from-violet-500/12 to-purple-600/5',
     },
-    { label: 'Districts covered', value: s ? String(s.districts) : '—', sub: 'Abu Dhabi', icon: Building2 },
+    {
+      label: 'Districts covered',
+      value: s ? String(s.districts) : '—',
+      sub: 'Abu Dhabi emirate',
+      icon: Building2,
+      accent: 'from-sky-500/12 to-blue-600/5',
+    },
     {
       label: 'Avg gross yield',
       value: s ? `${s.avgGrossYieldPct}%` : '—',
-      sub: 'across districts',
+      sub: 'Across districts',
       icon: TrendingUp,
+      accent: 'from-emerald-500/12 to-teal-600/5',
     },
     {
       label: 'Investor mandates',
       value: s ? String(s.investorMandates) : '—',
       sub: s ? `${s.transactions} txns analyzed` : '',
       icon: Users,
+      accent: 'from-amber-500/12 to-orange-600/5',
     },
   ];
 
   const movers = [...(data?.priceTrends ?? [])].sort((a, b) => b.momentumPct - a.momentumPct);
-  const topGainers = movers.slice(0, 4);
+  const topGainers = movers.slice(0, 5);
+  const maxMomentum = Math.max(1, ...movers.map((t) => Math.abs(t.momentumPct)));
   const maxMandates = Math.max(1, ...(data?.capitalSupply ?? []).map((c) => c.mandates));
+  const topMomentum = s?.topMomentumDistrict;
+
+  const momentumChart = {
+    type: 'hbar' as const,
+    title: 'District momentum',
+    unit: '%',
+    data: topGainers.slice(0, 5).map((t) => ({ label: t.district, value: t.momentumPct })),
+  };
+
+  const quickLinks: { label: Tab; icon: typeof LayoutDashboard; desc: string }[] = [
+    { label: 'Market', icon: TrendingUp, desc: 'Maps & district trends' },
+    { label: 'Best Match', icon: MapPin, desc: 'Find districts for you' },
+    { label: 'Opportunities', icon: Building2, desc: 'Match capital to parcels' },
+    { label: 'Portfolio', icon: Wallet, desc: 'Track your assets' },
+  ];
 
   return (
-    <>
+    <div className="space-y-6">
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
-          <Card key={stat.label}>
+          <Card
+            key={stat.label}
+            className={cn('overflow-hidden border-border/80 bg-gradient-to-br', stat.accent)}
+          >
             <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-semibold text-muted-foreground">
                 {stat.label}
@@ -2686,58 +2732,42 @@ function OverviewPage({
         ))}
       </section>
 
-      <MarketBriefing />
-
-      <DashboardPriceDrops />
-
-      <Card className="bg-primary/[0.04]">
-        <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-lg bg-primary/12 text-primary">
-              <Sparkles className="size-5" />
-            </span>
-            <div>
-              <p className="font-semibold text-foreground">Ask the assistant</p>
-              <p className="text-sm text-muted-foreground">
-                Cross-dataset answers with cited sources — e.g. where a balanced fund should deploy.
-              </p>
-            </div>
-          </div>
-          <Button onClick={() => onNavigate('Assistant')}>
-            <Dog className="size-4" />
-            Open Assistant
-          </Button>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
+      <section className="grid gap-6 xl:grid-cols-12">
+        <Card className="xl:col-span-7">
+          <CardHeader className="flex-row items-center justify-between space-y-0 border-b border-border/60 pb-4">
             <div>
               <CardTitle className="text-base">Top opportunities</CardTitle>
-              <p className="text-sm text-muted-foreground">Highest development potential, vacant</p>
+              <p className="text-sm text-muted-foreground">
+                Highest development potential across vacant parcels
+              </p>
             </div>
             <Button variant="ghost" size="sm" onClick={() => onNavigate('Opportunities')}>
               View all
+              <ArrowRight className="size-3.5" />
             </Button>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {(data?.topVacant ?? []).slice(0, 5).map((p) => (
+          <CardContent className="space-y-2 pt-4">
+            {(data?.topVacant ?? []).slice(0, 5).map((p, index) => (
               <div
                 key={p.parcel_id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 p-2.5"
+                className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 p-3 transition hover:border-border hover:bg-muted/35"
               >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-foreground">{p.parcel_id}</span>
-                    <Badge variant="secondary">{p.district}</Badge>
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-xs font-extrabold text-primary">
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-foreground">{p.parcel_id}</span>
+                      <Badge variant="secondary">{p.district}</Badge>
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {titleCase(p.recommended_use)} · {aedShort(p.estimated_value_aed)}
+                    </p>
                   </div>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {titleCase(p.recommended_use)} · {aedShort(p.estimated_value_aed)}
-                  </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-base font-extrabold text-foreground">
+                  <div className="text-lg font-extrabold text-foreground">
                     {p.development_potential_score}
                   </div>
                   <div className="text-[10px] tracking-wide text-muted-foreground uppercase">
@@ -2746,43 +2776,148 @@ function OverviewPage({
                 </div>
               </div>
             ))}
-            {!data && <p className="py-4 text-sm text-muted-foreground">Loading…</p>}
+            {!data && <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>}
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle className="text-base">Market movers</CardTitle>
-              <p className="text-sm text-muted-foreground">6-month price momentum by district</p>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => onNavigate('Market')}>
-              View market
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-2.5">
-            {topGainers.map((t) => (
-              <div key={t.district} className="flex items-center justify-between text-sm">
-                <span className="font-medium text-foreground">{t.district}</span>
-                <span className="flex items-center gap-3 text-muted-foreground">
-                  <span>{AED.format(t.avgPricePerSqm)}/sqm</span>
-                  <span
-                    className={cn(
-                      'inline-flex w-16 items-center justify-end gap-1 font-semibold',
-                      t.momentumPct >= 0 ? 'text-emerald-700' : 'text-destructive',
-                    )}
-                  >
-                    <ArrowUpRight className={cn('size-3.5', t.momentumPct < 0 && 'rotate-90')} />
-                    {t.momentumPct >= 0 ? '+' : ''}
-                    {t.momentumPct}%
-                  </span>
+        <div className="flex flex-col gap-6 xl:col-span-5">
+          <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/[0.07] to-primary/[0.02]">
+            <CardContent className="p-5">
+              <div className="flex items-start gap-3">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                  <Sparkles className="size-5" />
                 </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-foreground">Ask the assistant</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Cross-dataset answers with cited sources and live charts.
+                  </p>
+                  <Button className="mt-4 w-full" onClick={() => onNavigate('Assistant')}>
+                    <Dog className="size-4" />
+                    Open Assistant
+                  </Button>
+                </div>
               </div>
-            ))}
-            {!data && <p className="py-4 text-sm text-muted-foreground">Loading…</p>}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Quick links
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-2 pt-0">
+              {quickLinks.map((link) => (
+                <button
+                  key={link.label}
+                  type="button"
+                  onClick={() => onNavigate(link.label)}
+                  className="flex items-center gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2.5 text-left transition hover:border-border hover:bg-muted/40"
+                >
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <link.icon className="size-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-foreground">{link.label}</span>
+                    <span className="block text-xs text-muted-foreground">{link.desc}</span>
+                  </span>
+                  <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" />
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+
+          {topMomentum && (
+            <Card className="border-emerald-500/20 bg-gradient-to-br from-emerald-500/8 to-transparent">
+              <CardContent className="p-4">
+                <p className="text-xs font-bold tracking-wide text-emerald-800 uppercase">
+                  Top momentum
+                </p>
+                <p className="mt-1 text-lg font-extrabold text-foreground">{topMomentum.district}</p>
+                <p className="mt-0.5 text-sm font-semibold text-emerald-700">
+                  +{topMomentum.momentumPct}% over 6 months
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => onNavigate('Market')}
+                >
+                  Open market view
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-12">
+        <Card className="overflow-hidden xl:col-span-7">
+          <CardHeader className="border-b border-border/60 bg-gradient-to-r from-(--ink-deep) to-slate-900 pb-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-base text-white">Market map</CardTitle>
+                <p className="text-sm text-white/65">District pricing and momentum at a glance</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-white/20 bg-white/10 text-white hover:bg-white/20"
+                onClick={() => onNavigate('Market')}
+              >
+                Full market view
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-3">
+            <MarketMap districts={data?.districts ?? []} compact />
           </CardContent>
         </Card>
 
+        <div className="flex flex-col gap-6 xl:col-span-5">
+          <Card>
+            <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-base">Market movers</CardTitle>
+                <p className="text-sm text-muted-foreground">6-month price momentum</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => onNavigate('Market')}>
+                Details
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {topGainers.map((t) => (
+                <div key={t.district} className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="truncate font-medium text-foreground">{t.district}</span>
+                    <span
+                      className={cn(
+                        'inline-flex shrink-0 items-center gap-1 font-semibold',
+                        t.momentumPct >= 0 ? 'text-emerald-700' : 'text-destructive',
+                      )}
+                    >
+                      <ArrowUpRight className={cn('size-3.5', t.momentumPct < 0 && 'rotate-90')} />
+                      {t.momentumPct >= 0 ? '+' : ''}
+                      {t.momentumPct}%
+                    </span>
+                  </div>
+                  <OverviewMomentumBar value={t.momentumPct} max={maxMomentum} />
+                </div>
+              ))}
+              {!data && <p className="py-4 text-sm text-muted-foreground">Loading…</p>}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-5">
+              <Chart spec={momentumChart} className="my-0 border-0 bg-transparent p-0" />
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <div>
@@ -2824,7 +2959,10 @@ function OverviewPage({
           </CardHeader>
           <CardContent className="space-y-2.5">
             {(data?.serviceDemand ?? []).map((d) => (
-              <div key={d.district} className="flex items-center justify-between text-sm">
+              <div
+                key={d.district}
+                className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm"
+              >
                 <span className="font-medium text-foreground">{d.district}</span>
                 <Badge variant={d.avgDemandIndex >= 70 ? 'warning' : 'secondary'}>
                   {d.avgDemandIndex}/100
@@ -2834,8 +2972,12 @@ function OverviewPage({
             {!data && <p className="py-4 text-sm text-muted-foreground">Loading…</p>}
           </CardContent>
         </Card>
-      </div>
-    </>
+      </section>
+
+      <MarketBriefing />
+
+      <DashboardPriceDrops />
+    </div>
   );
 }
 

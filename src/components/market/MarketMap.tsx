@@ -38,9 +38,9 @@ function project(
   return { x, y };
 }
 
-function markerRadius(price: number, min: number, max: number): number {
+function markerRadius(price: number, min: number, max: number, compact = false): number {
   const t = max > min ? (price - min) / (max - min) : 0.5;
-  return 7 + t * 14;
+  return (compact ? 5 : 7) + t * (compact ? 10 : 14);
 }
 
 type Props = {
@@ -48,16 +48,17 @@ type Props = {
   selected?: string | null;
   onSelect?: (district: string | null) => void;
   className?: string;
+  compact?: boolean;
 };
 
-export function MarketMap({ districts, selected, onSelect, className }: Props) {
+export function MarketMap({ districts, selected, onSelect, className, compact = false }: Props) {
   const gradientId = useId();
   const glowId = useId();
   const [hovered, setHovered] = useState<string | null>(null);
 
   const W = 720;
-  const H = 480;
-  const pad = 44;
+  const H = compact ? 320 : 480;
+  const pad = compact ? 36 : 44;
 
   const { points, bounds, priceRange } = useMemo(() => {
     if (districts.length === 0) {
@@ -84,7 +85,7 @@ export function MarketMap({ districts, selected, onSelect, className }: Props) {
     const points = districts.map((d) => ({
       ...d,
       ...project(d.latitude, d.longitude, bounds, W, H, pad),
-      r: markerRadius(d.avgPricePerSqm, Math.min(...prices), Math.max(...prices)),
+      r: markerRadius(d.avgPricePerSqm, Math.min(...prices), Math.max(...prices), compact),
     }));
 
     return {
@@ -92,7 +93,7 @@ export function MarketMap({ districts, selected, onSelect, className }: Props) {
       bounds,
       priceRange: { min: Math.min(...prices), max: Math.max(...prices) },
     };
-  }, [districts]);
+  }, [districts, compact]);
 
   const active = hovered ?? selected ?? null;
   const activePoint = points.find((p) => p.district === active);
@@ -159,12 +160,14 @@ export function MarketMap({ districts, selected, onSelect, className }: Props) {
           />
         ))}
 
-        <text x={pad} y={28} fill="rgba(255,255,255,0.55)" fontSize={11} fontWeight={700}>
+        <text x={pad} y={compact ? 22 : 28} fill="rgba(255,255,255,0.55)" fontSize={compact ? 10 : 11} fontWeight={700}>
           ABU DHABI · DISTRICT MARKET MAP
         </text>
-        <text x={W - pad} y={28} fill="rgba(255,255,255,0.45)" fontSize={10} textAnchor="end">
-          Bubble size = avg price/sqm
-        </text>
+        {!compact && (
+          <text x={W - pad} y={28} fill="rgba(255,255,255,0.45)" fontSize={10} textAnchor="end">
+            Bubble size = avg price/sqm
+          </text>
+        )}
 
         {points.map((p) => {
           const isActive = active === p.district;
@@ -215,7 +218,12 @@ export function MarketMap({ districts, selected, onSelect, className }: Props) {
       </svg>
 
       {activePoint && (
-        <div className="pointer-events-none absolute right-4 bottom-4 w-56 rounded-xl border border-white/15 bg-(--ink-deep)/90 p-3 text-white shadow-2xl backdrop-blur-md">
+        <div
+          className={cn(
+            'pointer-events-none absolute rounded-xl border border-white/15 bg-(--ink-deep)/90 text-white shadow-2xl backdrop-blur-md',
+            compact ? 'right-3 bottom-3 w-48 p-2.5' : 'right-4 bottom-4 w-56 p-3',
+          )}
+        >
           <p className="text-sm font-extrabold tracking-tight">{activePoint.district}</p>
           <p className="mt-0.5 text-[0.65rem] font-semibold tracking-wide text-white/55 uppercase">
             {activePoint.areaType.replace(/_/g, ' ')}
@@ -249,26 +257,30 @@ export function MarketMap({ districts, selected, onSelect, className }: Props) {
         </div>
       )}
 
-      <div className="absolute top-4 left-4 flex flex-wrap gap-2">
-        {[
-          { label: 'Hot', color: '#059669' },
-          { label: 'Rising', color: '#2b50f0' },
-          { label: 'Cooling', color: '#f59e0b' },
-          { label: 'Falling', color: '#ef4444' },
-        ].map((item) => (
-          <span
-            key={item.label}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/20 px-2 py-0.5 text-[0.62rem] font-bold text-white/80 backdrop-blur-sm"
-          >
-            <span className="size-2 rounded-full" style={{ background: item.color }} />
-            {item.label}
-          </span>
-        ))}
-      </div>
+      {!compact && (
+        <div className="absolute top-4 left-4 flex flex-wrap gap-2">
+          {[
+            { label: 'Hot', color: '#059669' },
+            { label: 'Rising', color: '#2b50f0' },
+            { label: 'Cooling', color: '#f59e0b' },
+            { label: 'Falling', color: '#ef4444' },
+          ].map((item) => (
+            <span
+              key={item.label}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/20 px-2 py-0.5 text-[0.62rem] font-bold text-white/80 backdrop-blur-sm"
+            >
+              <span className="size-2 rounded-full" style={{ background: item.color }} />
+              {item.label}
+            </span>
+          ))}
+        </div>
+      )}
 
-      <div className="absolute bottom-4 left-4 rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 text-[0.62rem] text-white/60 backdrop-blur-sm">
-        AED {AED.format(priceRange.min)} – {AED.format(priceRange.max)} /sqm
-      </div>
+      {!compact && (
+        <div className="absolute bottom-4 left-4 rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 text-[0.62rem] text-white/60 backdrop-blur-sm">
+          AED {AED.format(priceRange.min)} – {AED.format(priceRange.max)} /sqm
+        </div>
+      )}
     </div>
   );
 }
