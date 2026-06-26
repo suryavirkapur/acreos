@@ -162,7 +162,7 @@ const SHOWCASE: {
   },
 ];
 
-const FAQS = [
+const FAQS: { q: string; a: string; mascot?: boolean }[] = [
   {
     q: 'How much does it cost to get started?',
     a: 'AcreOS is usage-based: you only pay for the agent work that moves your deals forward. There are no per-seat fees, so your whole team can collaborate, and pricing scales with the size of your portfolio.',
@@ -190,6 +190,11 @@ const FAQS = [
   {
     q: 'What happens when an agent needs sign-off?',
     a: 'Agents drive the work but never act blindly. When a decision needs your judgment (a price, an LOI, a financing term), they surface a clear, reviewable interface and pause for approval.',
+  },
+  {
+    q: 'Wait, who is the corgi?',
+    a: 'Meet Corgi, the AcreOS mascot and the friendly face of your assistant. Corgi is how the agent runtime shows up for you: it fetches answers across your datasets, sniffs out the deals worth chasing, and flags what needs a human call. Say hello in the dashboard assistant.',
+    mascot: true,
   },
 ];
 
@@ -467,23 +472,22 @@ function Faq() {
         </p>
       </div>
 
-      <div className="island-shell mx-auto mt-12 max-w-3xl overflow-hidden">
+      <div className="mx-auto mt-12 max-w-3xl space-y-3">
         {FAQS.map((item, index) => {
           const isOpen = open === index;
           return (
-            <div key={item.q} className={index > 0 ? 'border-t border-(--line)' : undefined}>
+            <div key={item.q} className="faq-item" data-open={isOpen}>
               <button
                 type="button"
                 aria-expanded={isOpen}
                 onClick={() => setOpen(isOpen ? null : index)}
-                className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-(--paper-soft)/50"
+                className="flex w-full items-center gap-3.5 p-4 text-left sm:p-5"
               >
-                <span className="text-base font-bold text-(--ink)">{item.q}</span>
-                <ChevronDown
-                  className={`size-5 shrink-0 text-(--ink-faint) transition-transform duration-200 ${
-                    isOpen ? 'rotate-180' : ''
-                  }`}
-                />
+                <span className="faq-badge">{String(index + 1).padStart(2, '0')}</span>
+                <span className="flex-1 text-base font-bold text-(--ink)">{item.q}</span>
+                <span className="faq-toggle">
+                  <ChevronDown className="size-4.5" />
+                </span>
               </button>
               <div
                 className={`grid transition-all duration-300 ease-out ${
@@ -491,7 +495,21 @@ function Faq() {
                 }`}
               >
                 <div className="overflow-hidden">
-                  <p className="px-6 pb-5 text-sm/7 text-(--ink-soft)">{item.a}</p>
+                  {item.mascot ? (
+                    <div className="flex items-start gap-4 px-4 pb-5 sm:px-5 sm:pl-[4.4rem]">
+                      <img
+                        src="/corgi-hero.png"
+                        alt="Corgi, the AcreOS mascot"
+                        className="faq-corgi"
+                        loading="lazy"
+                      />
+                      <p className="text-sm/7 text-(--ink-soft)">{item.a}</p>
+                    </div>
+                  ) : (
+                    <p className="px-4 pb-5 text-sm/7 text-(--ink-soft) sm:px-5 sm:pl-[4.4rem]">
+                      {item.a}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -526,7 +544,7 @@ function App() {
           <div className="rise-in max-w-2xl">
             <span className="inline-flex items-center gap-2 rounded-full border border-(--line) bg-(--card)/80 px-3 py-1 text-xs font-semibold text-(--ink-soft) shadow-sm backdrop-blur-sm">
               <span className="size-1.5 rounded-full bg-(--brand)" />
-              Announcing our $100M Series A raise
+              Meet Corgi, your always-on AI deal assistant
             </span>
 
             <h1 className="display-title mt-6 text-5xl leading-[1.02] font-extrabold tracking-tight text-(--ink) sm:text-6xl xl:text-7xl">
