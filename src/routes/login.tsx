@@ -50,6 +50,10 @@ function Login() {
           <p className="mt-3 text-sm/6 text-muted-foreground">
             Enter your work email and we&rsquo;ll send you a 6-digit code to sign in. No passwords.
           </p>
+          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950">
+            Demo access: use verification code <code className="font-mono font-bold">123456</code>{' '}
+            after entering any email.
+          </p>
 
           <div className="mt-7 space-y-2">
             <Label htmlFor="email">Work email</Label>

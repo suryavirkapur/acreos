@@ -91,6 +91,10 @@ function Verify() {
               Resend code
             </button>
           </p>
+          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950">
+            Demo access is enabled: enter <code className="font-mono font-bold">123456</code> to
+            continue.
+          </p>
 
           {import.meta.env.DEV && (
             <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-950">

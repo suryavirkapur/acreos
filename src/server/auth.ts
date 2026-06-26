@@ -7,6 +7,7 @@ import { sendOtpEmail } from '@/server/email';
 import { getEnv } from '@/server/env';
 
 const THREE_HOURS_SECONDS = 60 * 60 * 3;
+const DEMO_SIGN_IN_OTP = '123456';
 
 function createAuth() {
   const env = getEnv();
@@ -27,6 +28,9 @@ function createAuth() {
         otpLength: 6,
         expiresIn: 60 * 10,
         resendStrategy: 'reuse',
+        generateOTP({ type }) {
+          if (type === 'sign-in') return DEMO_SIGN_IN_OTP;
+        },
         async sendVerificationOTP({ email, otp, type }) {
           await sendOtpEmail({ email, otp, type });
         },
