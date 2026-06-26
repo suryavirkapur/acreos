@@ -15,6 +15,10 @@ const betterAuthPureAsyncHooks = path.join(path.dirname(betterAuthAsyncHooks), '
 
 export default defineConfig({
   plugins: [pluginReact(), pluginTailwindcss(), tanstackStart()],
+  server: {
+    port: 3000,
+    strictPort: true,
+  },
   tools: {
     rspack: (config, { rspack }) => {
       // `pg` lazily `require('pg-native')` only when `pg.native` is accessed,

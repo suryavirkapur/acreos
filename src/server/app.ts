@@ -4,6 +4,8 @@ import { Scalar } from '@scalar/hono-api-reference';
 import type { Context } from 'hono';
 
 import { getAuth } from '@/server/auth';
+import { getDevOtp } from '@/server/dev-otp';
+import { getEnv } from '@/server/env';
 import {
   deleteConversation,
   getConversation,
@@ -40,6 +42,22 @@ import { chatHandler, chatRoute } from '@/server/routes/chat';
 import { healthHandler, healthRoute } from '@/server/routes/health';
 
 const app = new OpenAPIHono().basePath('/api');
+
+// Dev-only: surface OTP on the verify page when Resend sandbox cannot email the user.
+app.get('/auth/dev-otp', (c) => {
+  if (getEnv().NODE_ENV === 'production') {
+    return c.json({ error: 'not_found' }, 404);
+  }
+  const email = c.req.query('email')?.trim();
+  if (!email) {
+    return c.json({ error: 'email_required' }, 400);
+  }
+  const otp = getDevOtp(email);
+  if (!otp) {
+    return c.json({ otp: null }, 200);
+  }
+  return c.json({ otp }, 200);
+});
 
 // Better Auth handles all /api/auth/* requests (email OTP, sessions, etc.)
 app.on(['GET', 'POST'], '/auth/*', (c) => {
