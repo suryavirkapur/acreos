@@ -7,11 +7,16 @@ import { matchInvestorToParcels } from '@/server/data/matching';
 import { generateDealMemo } from '@/server/data/memo';
 import {
   capitalSupplyBySector,
+  exploreParcels,
   listInvestors,
+  parcelFacets,
+  type ParcelFilter,
+  type ParcelSort,
   portfolioSummary,
   priceTrendByDistrict,
   serviceDemandByDistrict,
   topVacantParcels,
+  transactionBreakdown,
 } from '@/server/data/queries';
 import { chatHandler, chatRoute } from '@/server/routes/chat';
 import { healthHandler, healthRoute } from '@/server/routes/health';
@@ -67,12 +72,40 @@ app.get('/intel/investors', (c) => {
   return c.json({ investors: listInvestors() });
 });
 
+function parseFilter(body: Record<string, unknown>): ParcelFilter {
+  const f = (body.filter ?? {}) as Record<string, unknown>;
+  const filter: ParcelFilter = {};
+  if (typeof f.district === 'string' && f.district) filter.district = f.district;
+  if (typeof f.landUse === 'string' && f.landUse) filter.landUse = f.landUse;
+  if (typeof f.status === 'string' && f.status) filter.status = f.status;
+  if (typeof f.recommendedUse === 'string' && f.recommendedUse)
+    filter.recommendedUse = f.recommendedUse;
+  if (typeof f.minPotential === 'number') filter.minPotential = f.minPotential;
+  if (typeof f.maxValueAed === 'number') filter.maxValueAed = f.maxValueAed;
+  if (typeof f.minSizeSqm === 'number') filter.minSizeSqm = f.minSizeSqm;
+  return filter;
+}
+
 app.post('/intel/match', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const investorId = typeof body.investorId === 'string' ? body.investorId : '';
-  const result = matchInvestorToParcels(investorId, 5);
+  const result = matchInvestorToParcels(investorId, 8, parseFilter(body));
   if (!result) return c.json({ error: `unknown investor ${investorId}` }, 404);
   return c.json(result);
+});
+
+app.get('/intel/facets', (c) => c.json(parcelFacets()));
+
+app.post('/intel/parcels', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const sort = (typeof body.sort === 'string' ? body.sort : 'potential') as ParcelSort;
+  const limit = typeof body.limit === 'number' ? body.limit : 50;
+  return c.json(exploreParcels(parseFilter(body), sort, limit));
+});
+
+app.get('/intel/transactions', (c) => {
+  const district = c.req.query('district');
+  return c.json({ breakdown: transactionBreakdown(district || undefined) });
 });
 
 app.post('/intel/deal-memo', async (c) => {

@@ -1,3 +1,4 @@
+import { matchesFilter, type ParcelFilter } from '@/server/data/queries';
 import { getDataStore } from '@/server/data/store';
 import type { Investor, Parcel } from '@/server/data/types';
 
@@ -80,20 +81,26 @@ export function scoreMatch(investor: Investor, parcel: Parcel): ScoredMatch {
   return { parcel, score: Math.round(score * 10) / 10, reasons, breakdown };
 }
 
-export function matchInvestorToParcels(investorId: string, limit = 5): {
+export function matchInvestorToParcels(
+  investorId: string,
+  limit = 5,
+  filter: ParcelFilter = {},
+): {
   investor: Investor;
   matches: ScoredMatch[];
+  candidateCount: number;
 } | null {
   const { investors, parcels } = getDataStore();
   const investor = investors.find((i) => i.investor_id === investorId);
   if (!investor) return null;
 
-  const matches = parcels
+  const candidates = parcels.filter((p) => matchesFilter(p, filter));
+  const matches = candidates
     .map((parcel) => scoreMatch(investor, parcel))
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 
-  return { investor, matches };
+  return { investor, matches, candidateCount: candidates.length };
 }
 
 export type Mandate = {
@@ -104,7 +111,11 @@ export type Mandate = {
 };
 
 /** Match an ad-hoc mandate (no investor id) — used by the copilot. */
-export function matchMandateToParcels(mandate: Mandate, limit = 5): ScoredMatch[] {
+export function matchMandateToParcels(
+  mandate: Mandate,
+  limit = 5,
+  filter: ParcelFilter = {},
+): ScoredMatch[] {
   const { parcels } = getDataStore();
   const synthetic: Investor = {
     investor_id: 'AD-HOC',
@@ -118,6 +129,7 @@ export function matchMandateToParcels(mandate: Mandate, limit = 5): ScoredMatch[
   };
 
   return parcels
+    .filter((parcel) => matchesFilter(parcel, filter))
     .map((parcel) => scoreMatch(synthetic, parcel))
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);

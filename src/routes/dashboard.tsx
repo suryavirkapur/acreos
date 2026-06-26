@@ -6,8 +6,11 @@ import {
   FileText,
   LayoutDashboard,
   LogOut,
+  MapPin,
+  Search,
   Send,
   Settings,
+  SlidersHorizontal,
   Sparkles,
   TrendingUp,
   Users,
@@ -28,13 +31,14 @@ export const Route = createFileRoute('/dashboard')({
   component: Dashboard,
 });
 
-const TABS = ['Overview', 'Copilot', 'Opportunities', 'Market', 'Investors'] as const;
+const TABS = ['Overview', 'Copilot', 'Opportunities', 'Explore', 'Market', 'Investors'] as const;
 type Tab = (typeof TABS)[number];
 
 const NAV: { label: Tab; icon: typeof LayoutDashboard }[] = [
   { label: 'Overview', icon: LayoutDashboard },
   { label: 'Copilot', icon: Sparkles },
   { label: 'Opportunities', icon: Building2 },
+  { label: 'Explore', icon: Search },
   { label: 'Market', icon: TrendingUp },
   { label: 'Investors', icon: Users },
 ];
@@ -43,9 +47,27 @@ const TAB_SUBTITLE: Record<Tab, string> = {
   Overview: 'Grounded in Abu Dhabi parcels, transactions, investors & communities',
   Copilot: 'Ask cross-dataset questions, get cited answers',
   Opportunities: 'Match investor mandates to land parcels',
+  Explore: 'Filter and drill into the parcel & transaction data',
   Market: 'District price levels and momentum',
   Investors: 'Active mandates across the UAE',
 };
+
+type Facets = {
+  districts: string[];
+  landUses: string[];
+  statuses: string[];
+  recommendedUses: string[];
+};
+
+type ParcelFilter = {
+  district?: string;
+  landUse?: string;
+  status?: string;
+  minPotential?: number;
+  maxValueAed?: number;
+};
+
+const titleCase = (s: string) => s.replace(/_/g, ' ');
 
 const AED = new Intl.NumberFormat('en-AE', { maximumFractionDigits: 0 });
 
@@ -339,12 +361,23 @@ function MemoModal({
     };
   }, [investorId, parcelId]);
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div
-        className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Close memo"
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+      />
+      <div className="relative z-10 max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText className="size-5 text-primary" />
@@ -376,28 +409,39 @@ function MemoModal({
   );
 }
 
-function CapitalAllocator({ investors }: { investors: Investor[] }) {
+function CapitalAllocator({
+  investors,
+  facets,
+}: {
+  investors: Investor[];
+  facets: Facets | null;
+}) {
   const [investorId, setInvestorId] = useState('');
   const [matches, setMatches] = useState<Match[]>([]);
+  const [candidateCount, setCandidateCount] = useState<number | null>(null);
+  const [filter, setFilter] = useState<ParcelFilter>({});
   const [loading, setLoading] = useState(false);
+  const [hasRun, setHasRun] = useState(false);
   const [memoFor, setMemoFor] = useState<{ investorId: string; parcelId: string } | null>(null);
 
   useEffect(() => {
     if (!investorId && investors.length > 0) setInvestorId(investors[0].investor_id);
   }, [investors, investorId]);
 
-  async function runMatch(id: string) {
+  async function runMatch(id: string, f: ParcelFilter) {
     if (!id) return;
     setLoading(true);
+    setHasRun(true);
     setMatches([]);
     try {
       const res = await fetch('/api/intel/match', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ investorId: id }),
+        body: JSON.stringify({ investorId: id, filter: f }),
       });
       const data = await res.json();
       setMatches(data.matches ?? []);
+      setCandidateCount(typeof data.candidateCount === 'number' ? data.candidateCount : null);
     } finally {
       setLoading(false);
     }
@@ -432,7 +476,7 @@ function CapitalAllocator({ investors }: { investors: Investor[] }) {
               ))}
             </select>
           </label>
-          <Button onClick={() => runMatch(investorId)} disabled={loading || !investorId}>
+          <Button onClick={() => runMatch(investorId, filter)} disabled={loading || !investorId}>
             <Sparkles className="size-4" />
             {loading ? 'Matching…' : 'Find matches'}
           </Button>
@@ -444,6 +488,26 @@ function CapitalAllocator({ investors }: { investors: Investor[] }) {
             <Badge variant="outline">prefers {selected.preferred_district}</Badge>
             <Badge variant="outline">{selected.investment_horizon}-term</Badge>
           </div>
+        )}
+
+        <FilterBar
+          facets={facets}
+          filter={filter}
+          onChange={(f) => {
+            setFilter(f);
+            if (hasRun) runMatch(investorId, f);
+          }}
+          onReset={() => {
+            setFilter({});
+            if (hasRun) runMatch(investorId, {});
+          }}
+        />
+
+        {candidateCount !== null && (
+          <p className="text-xs text-muted-foreground">
+            Scored against {candidateCount} parcel{candidateCount === 1 ? '' : 's'} matching your
+            filters.
+          </p>
         )}
 
         <div className="space-y-2">
@@ -495,6 +559,326 @@ function CapitalAllocator({ investors }: { investors: Investor[] }) {
         />
       )}
     </Card>
+  );
+}
+
+function Select({
+  label,
+  value,
+  options,
+  onChange,
+  anyLabel,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  anyLabel: string;
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-xs font-semibold text-muted-foreground">
+      {label}
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 min-w-40 rounded-md border border-border bg-background px-3 text-sm text-foreground"
+      >
+        <option value="">{anyLabel}</option>
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {titleCase(o)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+const MIN_POTENTIAL = [0, 60, 70, 80, 90];
+
+function FilterBar({
+  facets,
+  filter,
+  onChange,
+  onReset,
+}: {
+  facets: Facets | null;
+  filter: ParcelFilter;
+  onChange: (f: ParcelFilter) => void;
+  onReset: () => void;
+}) {
+  const active = Object.values(filter).filter((v) => v !== undefined && v !== '').length;
+  return (
+    <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-muted/30 p-3">
+      <div className="flex items-center gap-1.5 self-center text-sm font-semibold text-foreground">
+        <SlidersHorizontal className="size-4 text-primary" />
+        Filters
+        {active > 0 && <Badge variant="default">{active}</Badge>}
+      </div>
+      <Select
+        label="District"
+        anyLabel="Any district"
+        value={filter.district ?? ''}
+        options={facets?.districts ?? []}
+        onChange={(district) => onChange({ ...filter, district: district || undefined })}
+      />
+      <Select
+        label="Land use"
+        anyLabel="Any use"
+        value={filter.landUse ?? ''}
+        options={facets?.landUses ?? []}
+        onChange={(landUse) => onChange({ ...filter, landUse: landUse || undefined })}
+      />
+      <Select
+        label="Status"
+        anyLabel="Any status"
+        value={filter.status ?? ''}
+        options={facets?.statuses ?? []}
+        onChange={(status) => onChange({ ...filter, status: status || undefined })}
+      />
+      <label className="flex flex-col gap-1 text-xs font-semibold text-muted-foreground">
+        Min potential
+        <select
+          value={String(filter.minPotential ?? 0)}
+          onChange={(e) =>
+            onChange({ ...filter, minPotential: Number(e.target.value) || undefined })
+          }
+          className="h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground"
+        >
+          {MIN_POTENTIAL.map((v) => (
+            <option key={v} value={v}>
+              {v === 0 ? 'Any' : `${v}+`}
+            </option>
+          ))}
+        </select>
+      </label>
+      {active > 0 && (
+        <Button variant="ghost" size="sm" onClick={onReset}>
+          <X className="size-4" />
+          Clear
+        </Button>
+      )}
+    </div>
+  );
+}
+
+type ExploreData = {
+  total: number;
+  parcels: Array<{
+    parcel_id: string;
+    district: string;
+    land_use: string;
+    current_status: string;
+    parcel_size_sqm: number;
+    development_potential_score: number;
+    estimated_value_aed: number;
+    recommended_use: string;
+  }>;
+  stats: {
+    count: number;
+    totalValueAed: number;
+    avgPotential: number;
+    avgValueAed: number;
+    byLandUse: Array<{ key: string; count: number }>;
+    byStatus: Array<{ key: string; count: number }>;
+  };
+};
+
+const SORTS: { value: string; label: string }[] = [
+  { value: 'potential', label: 'Development potential' },
+  { value: 'value_desc', label: 'Value (high → low)' },
+  { value: 'value_asc', label: 'Value (low → high)' },
+  { value: 'size_desc', label: 'Size (largest)' },
+];
+
+function Explorer({ facets }: { facets: Facets | null }) {
+  const [filter, setFilter] = useState<ParcelFilter>({});
+  const [sort, setSort] = useState('potential');
+  const [data, setData] = useState<ExploreData | null>(null);
+  const [txns, setTxns] = useState<
+    Array<{ assetType: string; count: number; avgPricePerSqm: number }>
+  >([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    const ctrl = new AbortController();
+    fetch('/api/intel/parcels', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ filter, sort, limit: 50 }),
+      signal: ctrl.signal,
+    })
+      .then((r) => r.json())
+      .then((d) => setData(d))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+    return () => ctrl.abort();
+  }, [filter, sort]);
+
+  useEffect(() => {
+    const q = filter.district ? `?district=${encodeURIComponent(filter.district)}` : '';
+    fetch(`/api/intel/transactions${q}`)
+      .then((r) => r.json())
+      .then((d) => setTxns(d.breakdown ?? []))
+      .catch(() => setTxns([]));
+  }, [filter.district]);
+
+  const stats = data?.stats;
+
+  return (
+    <div className="space-y-4">
+      <FilterBar facets={facets} filter={filter} onChange={setFilter} onReset={() => setFilter({})} />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: 'Parcels matched', value: stats ? String(stats.count) : '—' },
+          { label: 'Total value', value: stats ? aedShort(stats.totalValueAed) : '—' },
+          { label: 'Avg value', value: stats ? aedShort(stats.avgValueAed) : '—' },
+          { label: 'Avg potential', value: stats ? `${stats.avgPotential}/100` : '—' },
+        ].map((s) => (
+          <Card key={s.label}>
+            <CardContent className="pt-6">
+              <div className="text-2xl font-extrabold tracking-tight text-foreground">{s.value}</div>
+              <p className="mt-1 text-xs font-medium text-muted-foreground">{s.label}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">By land use</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1.5">
+            {(stats?.byLandUse ?? []).map((row) => (
+              <div key={row.key} className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{titleCase(row.key)}</span>
+                <span className="font-semibold text-foreground">{row.count}</span>
+              </div>
+            ))}
+            {!stats && <p className="text-sm text-muted-foreground">—</p>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">By status</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1.5">
+            {(stats?.byStatus ?? []).map((row) => (
+              <div key={row.key} className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{titleCase(row.key)}</span>
+                <span className="font-semibold text-foreground">{row.count}</span>
+              </div>
+            ))}
+            {!stats && <p className="text-sm text-muted-foreground">—</p>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">
+              Transactions {filter.district ? `· ${filter.district}` : '· all districts'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1.5">
+            {txns.slice(0, 6).map((row) => (
+              <div key={row.assetType} className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{titleCase(row.assetType)}</span>
+                <span className="font-semibold text-foreground">
+                  {AED.format(row.avgPricePerSqm)}/sqm
+                </span>
+              </div>
+            ))}
+            {txns.length === 0 && <p className="text-sm text-muted-foreground">—</p>}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-base">Parcels</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {data ? `Showing ${data.parcels.length} of ${data.total}` : 'Loading…'}
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+            Sort by
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground"
+            >
+              {SORTS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </CardHeader>
+        <CardContent className="px-0 pb-0">
+          <div className="max-h-[560px] overflow-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-card">
+                <tr className="border-y border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
+                  <th className="px-6 py-3 font-semibold">Parcel</th>
+                  <th className="p-3 font-semibold">Use</th>
+                  <th className="p-3 font-semibold">Status</th>
+                  <th className="p-3 text-right font-semibold">Size</th>
+                  <th className="p-3 text-right font-semibold">Value</th>
+                  <th className="px-6 py-3 text-right font-semibold">Potential</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data?.parcels ?? []).map((p) => (
+                  <tr
+                    key={p.parcel_id}
+                    className="border-b border-border/70 last:border-0 hover:bg-muted/50"
+                  >
+                    <td className="px-6 py-3">
+                      <div className="font-semibold text-foreground">{p.parcel_id}</div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="size-3" />
+                        {p.district} · {titleCase(p.recommended_use)}
+                      </div>
+                    </td>
+                    <td className="p-3 text-foreground">{titleCase(p.land_use)}</td>
+                    <td className="p-3">
+                      <Badge variant="secondary">{titleCase(p.current_status)}</Badge>
+                    </td>
+                    <td className="p-3 text-right text-muted-foreground">
+                      {AED.format(p.parcel_size_sqm)} m²
+                    </td>
+                    <td className="p-3 text-right text-foreground">
+                      {aedShort(p.estimated_value_aed)}
+                    </td>
+                    <td className="px-6 py-3 text-right font-semibold text-foreground">
+                      {p.development_potential_score}
+                    </td>
+                  </tr>
+                ))}
+                {loading && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
+                      Loading parcels…
+                    </td>
+                  </tr>
+                )}
+                {!loading && data && data.parcels.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
+                      No parcels match these filters.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -619,6 +1003,7 @@ function Dashboard() {
   const { data: session, isPending } = authClient.useSession();
   const [data, setData] = useState<Summary | null>(null);
   const [investors, setInvestors] = useState<Investor[]>([]);
+  const [facets, setFacets] = useState<Facets | null>(null);
   const [tab, setTab] = useState<Tab>('Overview');
 
   useEffect(() => {
@@ -634,6 +1019,10 @@ function Dashboard() {
       .then((r) => r.json())
       .then((d) => setInvestors(d.investors ?? []))
       .catch(() => setInvestors([]));
+    fetch('/api/intel/facets')
+      .then((r) => r.json())
+      .then(setFacets)
+      .catch(() => setFacets(null));
   }, []);
 
   if (isPending) {
@@ -765,7 +1154,7 @@ function Dashboard() {
 
               <div className="grid gap-6 xl:grid-cols-3">
                 <div className="space-y-6 xl:col-span-2">
-                  <CapitalAllocator investors={investors} />
+                  <CapitalAllocator investors={investors} facets={facets} />
                   <MarketTable data={data} />
                 </div>
                 <Copilot />
@@ -779,7 +1168,11 @@ function Dashboard() {
             </div>
           )}
 
-          {tab === 'Opportunities' && <CapitalAllocator investors={investors} />}
+          {tab === 'Opportunities' && (
+            <CapitalAllocator investors={investors} facets={facets} />
+          )}
+
+          {tab === 'Explore' && <Explorer facets={facets} />}
 
           {tab === 'Market' && <MarketTable data={data} />}
 
