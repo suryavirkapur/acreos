@@ -3,6 +3,7 @@ import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { emailOTP } from 'better-auth/plugins';
 
 import { getDb } from '@/server/db';
+import { sendOtpEmail } from '@/server/email';
 import { getEnv } from '@/server/env';
 
 function createAuth() {
@@ -18,9 +19,8 @@ function createAuth() {
       emailOTP({
         otpLength: 6,
         expiresIn: 60 * 10,
-        // Dev transport: log the code. Swap for a real email provider in prod.
         async sendVerificationOTP({ email, otp, type }) {
-          console.log(`\n[AcreOS auth] ${type} code for ${email}: ${otp}\n`);
+          await sendOtpEmail({ email, otp, type });
         },
       }),
     ],

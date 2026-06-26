@@ -29,6 +29,10 @@ export default defineConfig({
 
       config.plugins ??= [];
       config.plugins.push(new rspack.IgnorePlugin({ resourceRegExp: /^pg-native$/ }));
+      // `resend` lazily `import('@react-email/render')` only when sending a React
+      // component as the email body. We always send raw `html`, so this optional
+      // dependency is never reached. Ignore it to silence the build warning.
+      config.plugins.push(new rspack.IgnorePlugin({ resourceRegExp: /^@react-email\/render$/ }));
     },
   },
 });

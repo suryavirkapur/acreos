@@ -13,6 +13,7 @@ const envSchema = z.object({
     .default('https://generativelanguage.googleapis.com/v1beta/openai/'),
   BETTER_AUTH_SECRET: z.string().min(1).default('dev-acreos-secret-change-me'),
   BETTER_AUTH_URL: z.string().default('http://localhost:3000'),
+  RESEND_API_KEY: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
 
