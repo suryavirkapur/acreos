@@ -744,8 +744,6 @@ function App() {
         </div>
       </div>
 
-      <PriceDropsSection />
-
       {/* flow */}
       <section id="how-it-works" className="page-wrap px-4 py-20">
         <div className="mx-auto max-w-2xl text-center">
@@ -816,6 +814,8 @@ function App() {
           </div>
         </div>
       </section>
+
+      <PriceDropsSection />
 
       {/* manifesto - product showcase rows */}
       <section id="manifesto" className="page-wrap px-4 py-24">

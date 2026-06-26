@@ -37,6 +37,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { authClient } from '@/lib/auth-client';
 import { Markdown } from '@/lib/markdown';
+import { HOMEPAGE_PRICE_DROPS } from '@/lib/price-drops';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/dashboard')({
@@ -206,6 +207,15 @@ function aedShort(value: number): string {
   if (value >= 1e9) return `AED ${(value / 1e9).toFixed(2)}B`;
   if (value >= 1e6) return `AED ${(value / 1e6).toFixed(1)}M`;
   return `AED ${AED.format(value)}`;
+}
+
+function compactArea(area: string): string {
+  return area
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(', ');
 }
 
 type Summary = {
@@ -2232,6 +2242,121 @@ function MarketBriefing() {
   );
 }
 
+function DashboardPriceDrops() {
+  const featured = HOMEPAGE_PRICE_DROPS[0];
+  const listings = HOMEPAGE_PRICE_DROPS.slice(1, 6);
+
+  if (!featured) return null;
+
+  return (
+    <Card>
+      <CardHeader className="flex-row items-start justify-between space-y-0">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-destructive/12 text-destructive">
+              <TrendingDown className="size-4.5" />
+            </span>
+            <div>
+              <CardTitle className="text-base">Property price drops</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Dubai listings with the sharpest repricing signals
+              </p>
+            </div>
+          </div>
+        </div>
+        <Badge variant="destructive">
+          {featured.largestTotalDropPercent.toFixed(1)}% max drop
+        </Badge>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 xl:grid-cols-[0.9fr_1.4fr]">
+          <a
+            href={featured.propertyfinderLink}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Open ${featured.title} on Property Finder`}
+            className="overflow-hidden rounded-lg border border-border bg-muted/30 transition hover:border-border/80"
+          >
+            <div className="relative aspect-[1.8] bg-muted">
+              <img
+                src={featured.imageUrl}
+                alt=""
+                className="size-full object-cover"
+                loading="lazy"
+              />
+              <Badge variant="destructive" className="absolute top-2 left-2 bg-card/95">
+                -{featured.largestTotalDropPercent.toFixed(1)}%
+              </Badge>
+            </div>
+            <div className="p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-foreground">{featured.title}</p>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
+                    {compactArea(featured.area)}
+                  </p>
+                </div>
+                <ArrowUpRight className="size-4 shrink-0 text-primary" />
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <p className="font-semibold tracking-wide text-muted-foreground uppercase">Now</p>
+                  <p className="text-sm font-extrabold text-foreground">
+                    {aedShort(featured.currentPrice)}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-semibold tracking-wide text-muted-foreground uppercase">Cut</p>
+                  <p className="text-sm font-extrabold text-destructive">
+                    {aedShort(featured.largestTotalDrop)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </a>
+
+          <div className="grid gap-2">
+            {listings.map((listing) => (
+              <a
+                key={listing.propertyFinderId}
+                href={listing.propertyfinderLink}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`Open ${listing.title} on Property Finder`}
+                className="grid grid-cols-[4.75rem_1fr_auto] items-center gap-3 rounded-lg border border-border bg-muted/30 p-2.5 transition hover:border-border/80"
+              >
+                <img
+                  src={listing.imageUrl}
+                  alt=""
+                  className="h-14 w-19 rounded-md object-cover"
+                  loading="lazy"
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-foreground">{listing.title}</p>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {compactArea(listing.area)}
+                  </p>
+                  <p className="mt-1 text-xs font-bold text-foreground">
+                    {aedShort(listing.currentPrice)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <Badge variant="destructive" className="mb-1">
+                    -{listing.largestTotalDropPercent.toFixed(1)}%
+                  </Badge>
+                  <p className="text-xs font-bold text-destructive">
+                    {aedShort(listing.largestTotalDrop)} cut
+                  </p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function OverviewPage({
   data,
   onNavigate,
@@ -2291,6 +2416,8 @@ function OverviewPage({
       </section>
 
       <MarketBriefing />
+
+      <DashboardPriceDrops />
 
       <Card className="bg-primary/[0.04]">
         <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
