@@ -1,0 +1,38 @@
+[tools]
+node = "25"
+pnpm = "11"
+
+[env]
+_.file = ".env"
+
+[tasks.dev]
+description = "run the development server"
+run = "pnpm dev"
+
+[tasks.build]
+description = "build for production"
+run = "pnpm build"
+
+[tasks.start]
+description = "start the production server"
+run = "pnpm start"
+
+[tasks.db-dev]
+description = "start local prisma postgres via pglite"
+run = "pnpm db:dev"
+
+[tasks.db-dev-detach]
+description = "start local prisma postgres in the background"
+run = "pnpm db:dev:detach"
+
+[tasks.db-dev-stop]
+description = "stop local prisma postgres"
+run = "pnpm db:dev:stop"
+
+[tasks.db-migrate]
+description = "apply prisma migrations"
+run = "pnpm db:migrate"
+
+[tasks.db-generate]
+description = "generate the prisma client"
+run = "pnpm db:generate"

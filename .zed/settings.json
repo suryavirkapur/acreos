@@ -1,0 +1,38 @@
+{
+  "format_on_save": "on",
+  "lsp": {
+    "tailwindcss-language-server": {
+      "settings": {
+        "tailwindCSS": {
+          "lint": {
+            "suggestCanonicalClasses": "ignore"
+          }
+        }
+      }
+    }
+  },
+  "languages": {
+    "TypeScript": {
+      "formatter": [
+        { "code_action": "source.fixAll.oxc" },
+        {
+          "external": {
+            "command": "oxfmt",
+            "arguments": ["--stdin-filepath", "{buffer_path}"]
+          }
+        }
+      ]
+    },
+    "TSX": {
+      "formatter": [
+        { "code_action": "source.fixAll.oxc" },
+        {
+          "external": {
+            "command": "oxfmt",
+            "arguments": ["--stdin-filepath", "{buffer_path}"]
+          }
+        }
+      ]
+    }
+  }
+}
